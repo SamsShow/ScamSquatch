@@ -1,0 +1,138 @@
+# ScamSquatch – Cursor Project Rules
+
+> These rules are automatically loaded by Cursor when you work inside this repo.  
+> They describe the **tech-stack**, **code-style**, and **architectural conventions** that the AI agent must follow.
+
+---
+
+## 0. Delivery Phases
+We are **starting with an MVP (Phase-1)** focused on shipping a _working demo_ within 6 days. All rules below apply _unless_ they conflict with the following MVP concessions:
+
+| Area                | Full Vision (later)                     | **MVP Scope (now)**                                   |
+|---------------------|-----------------------------------------|-------------------------------------------------------|
+| Chains supported    | Ethereum ⇄ Aptos, Sui, TON             | **Ethereum ⇄ Aptos only**                             |
+| Risk engine         | ML Isolation-Forest + rule fallback    | **Rule-based scoring, stub ML endpoint**              |
+| ML service          | Separate Flask micro-service           | **Optional** – may mock responses inside api-server   |
+| Testing coverage    | ≥ 80 % on every service                | **Target ≥ 60 %** with critical paths covered         |
+| UI features         | React-Flow graph + WalletConnect flow  | **Intent form + risk-labelled list** (graph optional) |
+| Deployment          | CI, preview envs, dockerised services  | **Local `pnpm dev` scripts**                          |
+
+> Once the MVP is accepted we will re-enable the full set of requirements.
+
+---
+
+## 1. Mission Statement
+ScamSquatch is an AI-powered fraud-detection layer for secure cross-chain swaps that integrates tightly with **1inch Fusion+**. Our codebase is split into three logical services that MUST remain loosely coupled:
+1. `frontend/` – React + Tailwind + React-Flow visual UI.
+2. `api-server/` – Node.js/Express orchestration layer that talks to 1inch, EVM RPCs & the ML service.
+3. `ml-service/` – Python/Flask service exposing an Isolation-Forest risk-scoring endpoint.
+
+All engineering work must preserve this separation of concerns.
+
+---
+
+## 2. Global Tech-Stack
+| Layer      | Technology                                |
+|------------|-------------------------------------------|
+| Frontend   | Next.js 14, TypeScript, Vite, TailwindCSS, React-Flow, WalletConnect v2 |
+| API Server | Node.js 20, TypeScript, Express, Ethers.js, Aptos SDK, Fusion+ SDK |
+| ML Service | Python 3.11, Flask, Scikit-learn, Pandas |
+| Testing    | Vitest + React Testing Library (FE), Jest (API), Pytest (ML) |
+| Dev Tooling| ESLint + Prettier, Husky + lint-staged, dotenv, EditorConfig |
+
+---
+
+## 3. Repository Layout (🚨 keep in sync!)
+```
+frontend/          # React client
+  ├─ src/
+  │   ├─ components/
+  │   ├─ pages/
+  │   ├─ lib/        # shared helpers (api, hooks, constants)
+  │   └─ styles/
+  └─ tests/
+api-server/        # Node/Express backend
+  ├─ src/
+  │   ├─ routes/
+  │   ├─ services/   # 1inch, on-chain, feature aggregation
+  │   ├─ workers/
+  │   └─ utils/
+  └─ tests/
+ml-service/        # Python Flask micro-service
+  ├─ app/
+  │   ├─ model/      # training & artifacts
+  │   ├─ routes.py
+  │   └─ utils.py
+  └─ tests/
+shared/            # JSON schemas, API typings, OpenAPI spec
+.env.example       # reference env file – update whenever a new var is introduced
+```
+
+---
+
+## 4. Naming & Formatting
+* **TypeScript**: `camelCase` for vars/functions, `PascalCase` for types & components, kebab-case for files & dirs.
+* **Python**: PEP-8 snake_case for modules, functions & variables; PascalCase for classes.
+* Always include a `.test.tsx?`, `.spec.ts` or `_test.py` next to the file under test.
+* Auto-format with **Prettier** (TS) and **black** (Python) before commit.
+
+---
+
+## 5. Frontend Rules
+1. Only functional React components (no classes). Prefer **hooks** and **composition**.
+2. Tailwind utility classes for styling – **never** write raw CSS unless inside `styles/globals.css`.
+3. Visualise swap routes with **React-Flow**. Keep the graph logic inside `src/lib/graph/`.
+4. Fetch data via the API server, **never** call 1inch or RPCs directly from the browser.
+5. Use **Zod** schemas that live in `shared/` for type-safe API validation.
+6. Use Redux Toolkit for state management.
+7. Use shadcn/ui components with Supabase-inspired dark theme.
+
+---
+
+## 6. API-Server Rules
+1. Use **Express Router** modules under `src/routes`.
+2. Wrap external calls (**1inch**, **on-chain**, **ml-service**) in **service** classes inside `src/services`.
+3. Always validate request/response bodies against the shared Zod schemas.
+4. Hide secrets with `process.env.*`; any new env var MUST be mirrored in `.env.example`.
+5. Log with **pino**; never use `console.log` outside tests.
+
+---
+
+## 7. ML-Service Rules
+1. Serve predictions at `POST /score` with JSON `{ routeFeatures: RouteFeatures }` → `{ riskScore: float }`.
+2. Persist the trained Isolation-Forest model as `model.pkl` under `ml-service/app/model/`.
+3. Re-training scripts live in `ml-service/app/model/train.py`; they **must not** run in production.
+4. Keep inference stateless; no DB writes.
+
+---
+
+## 8. Testing & Quality Gates
+* **Branches must pass**: `pnpm lint && pnpm test` (root script runs all sub-projects).
+* Use **Vitest** snapshots only for visual components.
+* Aim for **>60%** coverage on each service for MVP.
+
+---
+
+## 9. Commit & PR Conventions
+* Conventional Commits (`feat:`, `fix:`, `chore:` …).
+* PR description MUST reference the relevant Notion task.
+* Every PR must include updated docs if public surface changes.
+
+---
+
+## 10. Security Notes
+* Never expose private keys or secrets in the repo or logs.
+* Support EVM testnets: **Ethereum Sepolia (11155111)** & **Polygon Amoy (80002)**.
+* Umi Network devnet RPC: `https://devnet.uminetwork.com/`.
+
+---
+
+## 11. Misc
+* Git hooks auto-run `pnpm ts-check` & `black --check` – keep them green.
+* Use **.editorconfig** to ensure consistent newlines and indent.
+
+Happy hacking – go catch those scam routes! 🚫💰
+description:
+globs:
+alwaysApply: false
+---

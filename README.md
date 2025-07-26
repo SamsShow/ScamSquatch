@@ -1,135 +1,81 @@
-# Turborepo starter
+# ScamSquatch 🚫💰
 
-This Turborepo starter is maintained by the Turborepo core team.
+ScamSquatch is an AI-powered fraud detection layer for secure cross-chain swaps that integrates with 1inch Fusion+. By analyzing real-time data, on-chain patterns, and swap routes, ScamSquatch acts as a protective AI agent that flags scam routes, fake bridges, and potential honeypots.
 
-## Using this example
+## 🏗 Project Structure
 
-Run the following command:
-
-```sh
-npx create-turbo@latest
+```bash
+scamsquatch/
+├── apps/
+│   ├── web/             # Next.js frontend
+│   └── docs/            # Swagger API documentation
+├── packages/
+│   ├── ui/             # Shared UI components with shadcn
+│   ├── config/         # Shared configs (TS, tailwind, etc)
+│   └── contracts/      # Contract ABIs and types
 ```
 
-## What's inside?
+## 🚀 MVP Features (Phase 1)
 
-This Turborepo includes the following packages/apps:
+- Cross-chain swap discovery using 1inch Fusion+ API
+- Rule-based fraud scoring system
+- Ethereum ⇄ Aptos testnet support
+- Risk-labelled route list UI
+- Wallet integration (WalletConnect v2)
 
-### Apps and Packages
+## 🛠 Tech Stack
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, shadcn/ui
+- **State Management**: Redux Toolkit
+- **Blockchain**: WalletConnect v2, wagmi, viem
+- **API Documentation**: Swagger/OpenAPI
+- **Development**: Turborepo, pnpm
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+## 🏁 Getting Started
 
-### Utilities
+1. Install dependencies:
+   ```bash
+   pnpm install
+   ```
 
-This Turborepo has some additional tools already setup for you:
+2. Set up environment variables:
+   ```bash
+   cp .env.example .env.local
+   ```
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+3. Start the development server:
+   ```bash
+   pnpm dev
+   ```
 
-### Build
+4. Open [http://localhost:3000](http://localhost:3000)
 
-To build all apps and packages, run the following command:
+## 📦 Commands
 
-```
-cd my-turborepo
+- `pnpm dev` - Start development server
+- `pnpm build` - Build all apps and packages
+- `pnpm lint` - Lint all apps and packages
+- `pnpm test` - Run tests
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
+## 🔐 Security Notes
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
+- Support for EVM testnets:
+  - Ethereum Sepolia (11155111)
+  - Polygon Amoy (80002)
+- Umi Network devnet RPC: `https://devnet.uminetwork.com/`
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+## 🤝 Contributing
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+1. Create a feature branch
+2. Commit changes
+3. Create a Pull Request
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+## 📄 License
 
-### Develop
+MIT
 
-To develop all apps and packages, run the following command:
+## 🙏 Acknowledgments
 
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+- [1inch Fusion+](https://portal.1inch.dev/documentation/apis/swap/fusion-plus/introduction)
+- [shadcn/ui](https://ui.shadcn.com)
+- [Supabase](https://supabase.com) (Design inspiration)
