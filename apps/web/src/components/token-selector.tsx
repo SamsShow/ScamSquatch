@@ -27,8 +27,13 @@ export function TokenSelector({ type, onClose }: TokenSelectorProps) {
 
   // Load tokens for current chain
   useEffect(() => {
+    console.log('TokenSelector: chainId changed to:', chainId)
     if (chainId) {
       loadTokens(chainId)
+    } else {
+      // Fallback: load tokens for a default chain if no chainId is available
+      console.log('TokenSelector: No chainId available, loading default tokens')
+      loadTokens(11155111) // Default to Sepolia
     }
   }, [chainId])
 
@@ -49,8 +54,10 @@ export function TokenSelector({ type, onClose }: TokenSelectorProps) {
 
   const loadTokens = async (chainId: number) => {
     try {
+      console.log('TokenSelector: Loading tokens for chainId:', chainId)
       setIsLoading(true)
       const tokenList = await oneInchAPI.getTokens(chainId)
+      console.log('TokenSelector: Loaded tokens:', tokenList.length)
       setTokens(tokenList)
       setFilteredTokens(tokenList)
     } catch (error) {
