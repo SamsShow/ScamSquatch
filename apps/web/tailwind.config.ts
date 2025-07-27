@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss"
 
 const config = {
-  darkMode: ["class"],
+  darkMode: "class",
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
@@ -54,14 +54,14 @@ const config = {
         },
         // Supabase-inspired colors
         'brand': {
-          DEFAULT: '#3ECF8E',
-          dark: '#24B47E',
-          light: '#6EE7B7',
+          DEFAULT: 'hsl(var(--brand))',
+          dark: 'hsl(var(--brand-dark))',
+          light: 'hsl(var(--brand-light))',
         },
         'dark': {
-          DEFAULT: '#1F1F1F',
-          secondary: '#2A2A2A',
-          accent: '#323232',
+          DEFAULT: 'hsl(var(--dark))',
+          secondary: 'hsl(var(--dark-secondary))',
+          accent: 'hsl(var(--dark-accent))',
         },
       },
       borderRadius: {

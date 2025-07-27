@@ -46,6 +46,13 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 142.4 71.8% 29.2%;
+    
+    /* Custom ScamSquatch theme variables */
+    --dark: 240 3.7% 15.9%;
+    --dark-secondary: 20 14.3% 4.1%;
+    --dark-accent: 12 6.5% 15.1%;
+    --brand: 142.1 70.6% 45.3%;
+    --brand-dark: 142.4 71.8% 29.2%;
   }
 }
  

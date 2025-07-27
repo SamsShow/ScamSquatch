@@ -1,101 +1,122 @@
-import Image, { type ImageProps } from "next/image";
-import { Button } from "@repo/ui/button";
+import Link from "next/link";
 import styles from "./page.module.css";
-
-type Props = Omit<ImageProps, "src"> & {
-  srcLight: string;
-  srcDark: string;
-};
-
-const ThemeImage = (props: Props) => {
-  const { srcLight, srcDark, ...rest } = props;
-
-  return (
-    <>
-      <Image {...rest} src={srcLight} className="imgLight" />
-      <Image {...rest} src={srcDark} className="imgDark" />
-    </>
-  );
-};
 
 export default function Home() {
   return (
     <div className={styles.page}>
       <main className={styles.main}>
-        <ThemeImage
-          className={styles.logo}
-          srcLight="turborepo-dark.svg"
-          srcDark="turborepo-light.svg"
-          alt="Turborepo logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>apps/docs/app/page.tsx</code>
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+        <div className={styles.logo}>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#3ECF8E' }}>
+            🚫💰 ScamSquatch
+          </h1>
+          <p style={{ fontSize: '1.2rem', color: '#666', marginTop: '0.5rem' }}>
+            AI-Powered Cross-Chain Swap Protection
+          </p>
+        </div>
+
+        <div style={{ maxWidth: '800px', margin: '2rem auto', textAlign: 'left' }}>
+          <h2 style={{ color: '#333', marginBottom: '1rem' }}>API Documentation</h2>
+          
+          <div style={{ background: '#f5f5f5', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem' }}>
+            <h3 style={{ color: '#3ECF8E', marginBottom: '1rem' }}>🚀 Core Features</h3>
+            <ul style={{ lineHeight: '1.6' }}>
+              <li><strong>1inch Fusion+ Integration:</strong> Real-time route discovery and swap execution</li>
+              <li><strong>AI Risk Assessment:</strong> Multi-factor scam detection and scoring</li>
+              <li><strong>Cross-Chain Support:</strong> Ethereum Sepolia ↔ Polygon Amoy</li>
+              <li><strong>Token Selection:</strong> Searchable token lists with popular tokens</li>
+              <li><strong>Route Visualization:</strong> Risk-labeled routes with detailed warnings</li>
+            </ul>
+          </div>
+
+          <div style={{ background: '#f5f5f5', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem' }}>
+            <h3 style={{ color: '#3ECF8E', marginBottom: '1rem' }}>🔒 Risk Assessment Factors</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <h4>Protocol Security (25%)</h4>
+                <p>Detects untrusted DEX protocols</p>
+              </div>
+              <div>
+                <h4>Price Impact (20%)</h4>
+                <p>Warns about high-slippage trades</p>
+              </div>
+              <div>
+                <h4>Route Complexity (10%)</h4>
+                <p>Flags multi-hop transaction risks</p>
+              </div>
+              <div>
+                <h4>Cross-Chain Bridges (15%)</h4>
+                <p>Special handling for bridge transactions</p>
+              </div>
+              <div>
+                <h4>Suspicious Tokens (20%)</h4>
+                <p>Identifies scam token patterns</p>
+              </div>
+              <div>
+                <h4>Liquidity Risk (15%)</h4>
+                <p>Detects low-liquidity routes</p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ background: '#f5f5f5', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem' }}>
+            <h3 style={{ color: '#3ECF8E', marginBottom: '1rem' }}>🔧 API Endpoints</h3>
+            <div style={{ fontFamily: 'monospace', background: '#fff', padding: '1rem', borderRadius: '4px' }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <strong>GET /api/tokens?chainId=11155111</strong><br/>
+                <span style={{ color: '#666' }}>Fetch supported tokens for a chain</span>
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <strong>POST /api/routes</strong><br/>
+                <span style={{ color: '#666' }}>Get swap routes with risk assessment</span>
+              </div>
+              <div>
+                <strong>POST /api/swap</strong><br/>
+                <span style={{ color: '#666' }}>Execute secure cross-chain swap</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ background: '#f5f5f5', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem' }}>
+            <h3 style={{ color: '#3ECF8E', marginBottom: '1rem' }}>🌐 Supported Networks</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ background: '#fff', padding: '1rem', borderRadius: '4px' }}>
+                <h4>Ethereum Sepolia</h4>
+                <p>Chain ID: 11155111</p>
+                <p>Testnet for Ethereum</p>
+              </div>
+              <div style={{ background: '#fff', padding: '1rem', borderRadius: '4px' }}>
+                <h4>Polygon Amoy</h4>
+                <p>Chain ID: 80002</p>
+                <p>Testnet for Polygon</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div className={styles.ctas}>
-          <a
+          <Link
             className={styles.primary}
-            href="https://vercel.com/new/clone?demo-description=Learn+to+implement+a+monorepo+with+a+two+Next.js+sites+that+has+installed+three+local+packages.&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2F4K8ZISWAzJ8X1504ca0zmC%2F0b21a1c6246add355e55816278ef54bc%2FBasic.png&demo-title=Monorepo+with+Turborepo&demo-url=https%3A%2F%2Fexamples-basic-web.vercel.sh%2F&from=templates&project-name=Monorepo+with+Turborepo&repository-name=monorepo-turborepo&repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fturborepo%2Ftree%2Fmain%2Fexamples%2Fbasic&root-directory=apps%2Fdocs&skippable-integrations=1&teamSlug=vercel&utm_source=create-turbo"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/"
+            style={{ textDecoration: 'none', color: 'inherit' }}
           >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
+            🚀 Try ScamSquatch
+          </Link>
           <a
-            href="https://turborepo.com/docs?utm_source"
+            href="https://portal.1inch.dev/documentation/apis/swap/fusion-plus/introduction"
             target="_blank"
             rel="noopener noreferrer"
             className={styles.secondary}
           >
-            Read our docs
+            📚 1inch API Docs
           </a>
         </div>
-        <Button appName="docs" className={styles.secondary}>
-          Open alert
-        </Button>
       </main>
+      
       <footer className={styles.footer}>
-        <a
-          href="https://vercel.com/templates?search=turborepo&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://turborepo.com?utm_source=create-turbo"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to turborepo.com →
-        </a>
+        <div style={{ textAlign: 'center', color: '#666' }}>
+          <p>Built with Next.js, TypeScript, and 1inch Fusion+</p>
+          <p>Protecting users from scam routes since 2024</p>
+        </div>
       </footer>
     </div>
   );

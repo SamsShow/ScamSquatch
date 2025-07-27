@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, PayloadAction, Slice } from '@reduxjs/toolkit'
 
 export interface Token {
   symbol: string
@@ -16,11 +16,12 @@ export interface SwapRoute {
   fromAmount: string
   toAmount: string
   estimatedGas: string
-  riskScore: number
-  riskFactors: string[]
+  gasCost: string
+  priceImpact: number
+  route: any // 1inch route object
 }
 
-interface SwapState {
+export interface SwapState {
   isLoading: boolean
   fromToken: Token | null
   toToken: Token | null
@@ -40,7 +41,7 @@ const initialState: SwapState = {
   error: null,
 }
 
-export const swapSlice = createSlice({
+export const swapSlice: Slice<SwapState> = createSlice({
   name: 'swap',
   initialState,
   reducers: {

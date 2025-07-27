@@ -1,7 +1,7 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, PayloadAction, Slice } from '@reduxjs/toolkit'
 import { type PublicClient, type WalletClient } from 'viem'
 
-interface WalletState {
+export interface WalletState {
   isConnecting: boolean
   isConnected: boolean
   address: string | null
@@ -21,7 +21,7 @@ const initialState: WalletState = {
   error: null,
 }
 
-export const walletSlice = createSlice({
+export const walletSlice: Slice<WalletState> = createSlice({
   name: 'wallet',
   initialState,
   reducers: {
@@ -47,9 +47,11 @@ export const walletSlice = createSlice({
       state.chainId = action.payload
     },
     setProvider: (state, action: PayloadAction<WalletClient | null>) => {
+      // @ts-expect-error - Complex viem types not compatible with immer
       state.provider = action.payload
     },
     setPublicClient: (state, action: PayloadAction<PublicClient | null>) => {
+      // @ts-expect-error - Complex viem types not compatible with immer
       state.publicClient = action.payload
     },
     setError: (state, action: PayloadAction<string | null>) => {
