@@ -2,13 +2,14 @@
 
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useAccount, useConnect, useDisconnect } from 'wagmi'
+import { useAccount, useConnect, useDisconnect, useChainId } from 'wagmi'
 import { Button } from '@/components/ui/button'
 import {
   setAddress,
   setConnected,
   setConnecting,
   setError,
+  setChainId,
 } from '@/store/slices/wallet'
 import type { RootState } from '@/store'
 
@@ -18,6 +19,7 @@ export function ConnectButton() {
   const { connect, connectors, isPending } = useConnect()
   const { disconnect } = useDisconnect()
   const { address, isConnected } = useAccount()
+  const chainId = useChainId()
 
   // Sync wagmi state with Redux
   useEffect(() => {
@@ -25,7 +27,9 @@ export function ConnectButton() {
     dispatch(setAddress(address || null))
     // @ts-expect-error - Redux action creators are properly typed
     dispatch(setConnected(isConnected))
-  }, [address, isConnected, dispatch])
+    // @ts-expect-error - Redux action creators are properly typed
+    dispatch(setChainId(chainId || null))
+  }, [address, isConnected, chainId, dispatch])
 
   const handleConnect = async () => {
     try {

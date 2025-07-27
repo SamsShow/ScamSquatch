@@ -6,20 +6,40 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { setFromAmount, setLoading, setRoutes, setError } from '@/store/slices/swap'
-import { oneInchAPI } from '@/lib/api/1inch'
-import { riskScoringService, type RiskAssessment } from '@/lib/services/risk-scoring'
+import { scamsquatchApi, type QuoteResponse } from '@/lib/scamsquatchApi'
 import { TokenSelector } from '@/components/token-selector'
 import { RouteList } from '@/components/route-list'
+import { BalanceFetcher } from '@/components/balance-fetcher'
+import { formatBalance } from '@/lib/utils'
 import type { RootState } from '@/store'
 
 export function SwapForm() {
   const dispatch = useDispatch()
-  const { isConnected, address } = useSelector((state: RootState) => state.wallet)
+  const { isConnected, address, chainId, balances } = useSelector((state: RootState) => state.wallet)
   const { fromToken, toToken, fromAmount, routes, isLoading, error } = useSelector((state: RootState) => state.swap)
   
   const [showFromTokenSelector, setShowFromTokenSelector] = useState(false)
   const [showToTokenSelector, setShowToTokenSelector] = useState(false)
-  const [riskAssessments, setRiskAssessments] = useState<RiskAssessment[]>([])
+  const [quoteResponse, setQuoteResponse] = useState<QuoteResponse | null>(null)
+
+  // Get the current balance for the selected token
+  const getCurrentBalance = () => {
+    if (!fromToken || !address || !chainId) return '0.00'
+    
+    const balance = balances.find(
+      b => b.address === fromToken.address && 
+           b.chainId === fromToken.chainId && 
+           b.symbol === fromToken.symbol
+    )
+    
+    if (!balance) {
+      // Check if we're still loading the balance
+      const isBalanceLoading = isConnected && address && chainId && fromToken
+      return isBalanceLoading ? 'Loading...' : '0.00'
+    }
+    
+    return formatBalance(balance.balance)
+  }
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // @ts-expect-error - Redux action creators are properly typed
@@ -40,27 +60,25 @@ export function SwapForm() {
       // Convert amount to wei
       const amountInWei = (parseFloat(fromAmount) * Math.pow(10, fromToken.decimals)).toString()
 
-      const quote = await oneInchAPI.getRoutes({
+      const response = await scamsquatchApi.getQuote({
+        fromChain: fromToken.chainId,
+        toChain: toToken.chainId,
         fromToken: fromToken.address,
         toToken: toToken.address,
         fromAmount: amountInWei,
-        fromChainId: fromToken.chainId,
-        toChainId: toToken.chainId,
         userAddress: address,
       })
 
-      if (quote.error) {
+      if (!response.success || !response.data) {
         // @ts-expect-error - Redux action creators are properly typed
-        dispatch(setError(quote.error))
+        dispatch(setError(response.error || 'Failed to get quote'))
         return
       }
 
-      // Assess risk for each route
-      const assessments = riskScoringService.assessRoutesRisk(quote.routes)
-      setRiskAssessments(assessments)
+      setQuoteResponse(response)
 
       // @ts-expect-error - Redux action creators are properly typed
-      dispatch(setRoutes(quote.routes))
+      dispatch(setRoutes(response.data.routes))
     } catch (error) {
       // @ts-expect-error - Redux action creators are properly typed
       dispatch(setError((error as Error).message))
@@ -74,6 +92,29 @@ export function SwapForm() {
 
   return (
     <div className="space-y-6">
+      {/* Balance Fetchers - These components fetch balances but don't render anything */}
+      {isConnected && address && chainId && (
+        <>
+          {/* Fetch ETH balance */}
+          <BalanceFetcher 
+            address={address} 
+            chainId={chainId} 
+            symbol="ETH" 
+            decimals={18}
+          />
+          {/* Fetch balance for selected token if different from ETH */}
+          {fromToken && fromToken.address !== '0x0000000000000000000000000000000000000000' && (
+            <BalanceFetcher 
+              address={address} 
+              chainId={chainId} 
+              tokenAddress={fromToken.address}
+              symbol={fromToken.symbol} 
+              decimals={fromToken.decimals}
+            />
+          )}
+        </>
+      )}
+
       <Card className="w-full p-4 bg-dark border-border/40">
         <div className="space-y-4">
           {/* From Token */}
@@ -81,7 +122,7 @@ export function SwapForm() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">From</span>
               <span className="text-sm text-muted-foreground">
-                Balance: 0.00 {fromToken?.symbol || 'ETH'}
+                Balance: {getCurrentBalance()} {fromToken?.symbol || 'ETH'}
               </span>
             </div>
             <div className="flex items-center space-x-2">
@@ -148,8 +189,8 @@ export function SwapForm() {
       </Card>
 
       {/* Routes Display */}
-      {routes.length > 0 && (
-        <RouteList routes={routes} riskAssessments={riskAssessments} />
+      {routes.length > 0 && quoteResponse && (
+        <RouteList routes={routes} riskAssessments={quoteResponse.data.riskAssessments} />
       )}
 
       {/* Token Selectors */}
