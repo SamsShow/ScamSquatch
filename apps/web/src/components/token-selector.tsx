@@ -17,25 +17,22 @@ interface TokenSelectorProps {
 
 export function TokenSelector({ type, onClose }: TokenSelectorProps) {
   const dispatch = useDispatch()
-  const { chainId } = useSelector((state: RootState) => state.wallet)
-  const { fromToken, toToken } = useSelector((state: RootState) => state.swap)
+  const { fromToken, toToken, fromChain, toChain } = useSelector((state: RootState) => state.swap)
   
   const [tokens, setTokens] = useState<TokenInfo[]>([])
   const [filteredTokens, setFilteredTokens] = useState<TokenInfo[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(true)
 
-  // Load tokens for current chain
+  // Load tokens for selected chain
   useEffect(() => {
-    console.log('TokenSelector: chainId changed to:', chainId)
-    if (chainId) {
-      loadTokens(chainId)
-    } else {
-      // Fallback: load tokens for a default chain if no chainId is available
-      console.log('TokenSelector: No chainId available, loading default tokens')
-      loadTokens(11155111) // Default to Sepolia
+    const selectedChain = type === 'from' ? fromChain : toChain
+    console.log(`TokenSelector: Loading tokens for ${type} chain:`, selectedChain?.id)
+    
+    if (selectedChain) {
+      loadTokens(selectedChain.id)
     }
-  }, [chainId])
+  }, [type, fromChain, toChain])
 
   // Filter tokens based on search
   useEffect(() => {
@@ -110,9 +107,13 @@ export function TokenSelector({ type, onClose }: TokenSelectorProps) {
           </div>
 
           {/* Chain Info */}
-          {chainId && (
+          {(type === 'from' && fromChain) || (type === 'to' && toChain) ? (
             <div className="text-sm text-muted-foreground">
-              Network: {getChainName(chainId)}
+              Network: {type === 'from' ? fromChain?.name : toChain?.name}
+            </div>
+          ) : (
+            <div className="text-sm text-red-500">
+              Please select a chain first
             </div>
           )}
 

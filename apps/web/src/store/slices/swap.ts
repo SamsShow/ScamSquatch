@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction, Slice } from '@reduxjs/toolkit'
+import { type Chain } from 'viem'
 
 export interface Token {
   symbol: string
@@ -29,6 +30,8 @@ export interface SwapState {
   routes: SwapRoute[]
   selectedRouteId: string | null
   error: string | null
+  fromChain: Chain | null
+  toChain: Chain | null
 }
 
 const initialState: SwapState = {
@@ -39,6 +42,8 @@ const initialState: SwapState = {
   routes: [],
   selectedRouteId: null,
   error: null,
+  fromChain: null,
+  toChain: null,
 }
 
 export const swapSlice: Slice<SwapState> = createSlice({
@@ -80,6 +85,25 @@ export const swapSlice: Slice<SwapState> = createSlice({
       state.error = action.payload
       state.isLoading = false
     },
+    setChain: (state, action: PayloadAction<{ type: 'from' | 'to', chain: Chain }>) => {
+      const { type, chain } = action.payload
+      if (type === 'from') {
+        state.fromChain = JSON.parse(JSON.stringify(chain))
+        // Reset from token when chain changes
+        if (state.fromToken?.chainId !== chain.id) {
+          state.fromToken = null
+        }
+      } else {
+        state.toChain = JSON.parse(JSON.stringify(chain))
+        // Reset to token when chain changes
+        if (state.toToken?.chainId !== chain.id) {
+          state.toToken = null
+        }
+      }
+      // Reset routes when chain changes
+      state.routes = []
+      state.selectedRouteId = null
+    },
     resetSwap: (state) => {
       state.isLoading = false
       state.fromToken = null
@@ -88,6 +112,8 @@ export const swapSlice: Slice<SwapState> = createSlice({
       state.routes = []
       state.selectedRouteId = null
       state.error = null
+      state.fromChain = null
+      state.toChain = null
     },
   },
 })
@@ -99,6 +125,7 @@ export const {
   setFromAmount,
   setRoutes,
   selectRoute,
+  setChain,
   setError,
   resetSwap,
 } = swapSlice.actions

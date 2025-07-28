@@ -47,13 +47,24 @@ const RISK_FACTORS: RiskFactor[] = [
   },
   {
     name: 'Cross-Chain Bridge',
-    weight: 15,
+    weight: 25,  // Increased weight for cross-chain risks
     description: 'Route involves cross-chain bridges',
+  },
+  {
+    name: 'Untrusted Bridge',
+    weight: 30,
+    description: 'Bridge protocol not in trusted list',
+  },
+  {
+    name: 'Chain Specific Risk',
+    weight: 20,
+    description: 'Destination chain has known vulnerabilities',
   },
 ]
 
 // Trusted protocols (whitelist)
 const TRUSTED_PROTOCOLS = [
+  // DEXs
   'uniswap',
   'sushiswap',
   'pancakeswap',
@@ -63,6 +74,14 @@ const TRUSTED_PROTOCOLS = [
   'paraswap',
   '0x',
   'kyber',
+  // Bridge Protocols
+  'wormhole',
+  'stargate',
+  'layerzero',
+  'across',
+  'hop',
+  'connext',
+  'hyperlane',
 ]
 
 // Known scam patterns
@@ -111,12 +130,37 @@ class RiskScoringService {
       warnings.push(`⚠️ Complex route with ${route.protocols.length} hops`)
     }
 
-    // Check for cross-chain bridges
+    // Check for cross-chain bridges and assess chain-specific risks
     if (route.fromToken.chainId !== route.toToken.chainId) {
-      const factor = RISK_FACTORS.find((f) => f.name === 'Cross-Chain Bridge')!
-      totalScore += factor.weight
-      factors.push(`${factor.description}: ${route.fromToken.chainId} → ${route.toToken.chainId}`)
+      // Base cross-chain risk
+      const bridgeFactor = RISK_FACTORS.find((f) => f.name === 'Cross-Chain Bridge')!
+      totalScore += bridgeFactor.weight
+      factors.push(`${bridgeFactor.description}: ${route.fromToken.chainId} → ${route.toToken.chainId}`)
       warnings.push(`⚠️ Cross-chain swap detected`)
+
+      // Check if bridge protocol is trusted
+      const bridgeProtocol = route.protocols.find(p => 
+        p.toLowerCase().includes('bridge') || 
+        p.toLowerCase().includes('portal') ||
+        p.toLowerCase().includes('wormhole') ||
+        p.toLowerCase().includes('layerzero')
+      )
+      
+      if (!bridgeProtocol || !TRUSTED_PROTOCOLS.some(tp => bridgeProtocol.toLowerCase().includes(tp))) {
+        const untrustedBridgeFactor = RISK_FACTORS.find((f) => f.name === 'Untrusted Bridge')!
+        totalScore += untrustedBridgeFactor.weight
+        factors.push(`${untrustedBridgeFactor.description}: ${bridgeProtocol || 'Unknown bridge'}`)
+        warnings.push(`🚨 Untrusted or unknown bridge protocol`)
+      }
+
+      // Check destination chain risks
+      // For testnet MVP we'll consider all non-Ethereum chains as higher risk
+      if (route.toToken.chainId !== 1 && route.toToken.chainId !== 11155111) { // Not Ethereum or Sepolia
+        const chainRiskFactor = RISK_FACTORS.find((f) => f.name === 'Chain Specific Risk')!
+        totalScore += chainRiskFactor.weight
+        factors.push(`${chainRiskFactor.description}: Chain ID ${route.toToken.chainId}`)
+        warnings.push(`⚠️ Destination chain has additional risks`)
+      }
     }
 
     // Check token names for scam patterns

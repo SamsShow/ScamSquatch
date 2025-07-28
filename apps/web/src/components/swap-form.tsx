@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { setFromAmount, setLoading, setRoutes, setError } from '@/store/slices/swap'
+import { ChainSelector } from '@/components/chain-selector'
 import { scamsquatchApi, type QuoteResponse } from '@/lib/scamsquatchApi'
 import { TokenSelector } from '@/components/token-selector'
 import { RouteList } from '@/components/route-list'
@@ -16,7 +17,7 @@ import type { RootState, AppDispatch } from '@/store'
 export function SwapForm() {
   const dispatch = useDispatch<AppDispatch>()
   const { address, chainId, balances } = useSelector((state: RootState) => state.wallet)
-  const { fromToken, toToken, fromAmount, routes, isLoading, error } = useSelector((state: RootState) => state.swap)
+  const { fromToken, toToken, fromAmount, routes, isLoading, error, fromChain, toChain } = useSelector((state: RootState) => state.swap)
   
   const [showFromTokenSelector, setShowFromTokenSelector] = useState(false)
   const [showToTokenSelector, setShowToTokenSelector] = useState(false)
@@ -45,6 +46,8 @@ export function SwapForm() {
 
   // Check if we can find routes
   const canFindRoutes = Boolean(
+    fromChain &&
+    toChain &&
     fromToken && 
     toToken && 
     fromAmount && 
@@ -52,15 +55,15 @@ export function SwapForm() {
   )
 
   const handleFindRoutes = async () => {
-    if (!canFindRoutes || !fromToken || !toToken || !address) return
+    if (!canFindRoutes || !fromToken || !toToken || !address || !fromChain || !toChain) return
     
     try {
       dispatch(setLoading(true))
       dispatch(setError(null))
       
       const response = await scamsquatchApi.getQuote({
-        fromChain: chainId || 1, // Default to Ethereum mainnet
-        toChain: chainId || 1, // For MVP, same chain swaps only
+        fromChain: fromChain.id,
+        toChain: toChain.id,
         fromToken: fromToken.address,
         toToken: toToken.address,
         fromAmount,
@@ -108,6 +111,14 @@ export function SwapForm() {
 
       <Card className="w-full p-4 bg-dark border-border/40">
         <div className="space-y-4">
+          {/* From Chain */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">From Chain</span>
+            </div>
+            <ChainSelector type="from" />
+          </div>
+
           {/* From Token */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -132,6 +143,15 @@ export function SwapForm() {
                 className="bg-dark-accent border-border/40"
               />
             </div>
+          </div>
+
+          {/* To Token */}
+          {/* To Chain */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">To Chain</span>
+            </div>
+            <ChainSelector type="to" />
           </div>
 
           {/* To Token */}
@@ -166,7 +186,9 @@ export function SwapForm() {
             disabled={!canFindRoutes || isLoading}
             onClick={handleFindRoutes}
           >
-            {!fromToken || !toToken
+            {!fromChain || !toChain
+              ? 'Select Chains'
+              : !fromToken || !toToken
               ? 'Select Tokens'
               : !fromAmount || parseFloat(fromAmount) <= 0
               ? 'Enter Amount'

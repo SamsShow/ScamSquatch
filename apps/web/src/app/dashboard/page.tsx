@@ -1,6 +1,7 @@
 'use client';
 
 import { SwapForm } from "@/components/swap-form";
+import { RiskAnalysis } from "@/components/risk-analysis";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -62,25 +63,7 @@ export default function DashboardPage() {
           {/* Risk Analysis */}
           <Card className="p-6 bg-card border-border">
             <h2 className="text-2xl font-semibold mb-6">Risk Analysis</h2>
-            <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-muted border border-border">
-                <h3 className="text-lg font-medium mb-2">Security Checks</h3>
-                <ul className="space-y-2">
-                  <li className="flex items-center text-green-500">
-                    <span className="h-4 w-4 mr-2">✓</span>
-                    Contract verified
-                  </li>
-                  <li className="flex items-center text-green-500">
-                    <span className="h-4 w-4 mr-2">✓</span>
-                    Liquidity locked
-                  </li>
-                  <li className="flex items-center text-yellow-500">
-                    <span className="h-4 w-4 mr-2">!</span>
-                    Medium price impact
-                  </li>
-                </ul>
-              </div>
-            </div>
+            <RiskAnalysis />
           </Card>
         </div>
       </main>
