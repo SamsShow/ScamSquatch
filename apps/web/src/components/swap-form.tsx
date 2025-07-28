@@ -11,10 +11,10 @@ import { TokenSelector } from '@/components/token-selector'
 import { RouteList } from '@/components/route-list'
 import { BalanceFetcher } from '@/components/balance-fetcher'
 import { formatBalance } from '@/lib/utils'
-import type { RootState } from '@/store'
+import type { RootState, AppDispatch } from '@/store'
 
 export function SwapForm() {
-  const dispatch = useDispatch()
+  const dispatch = useDispatch<AppDispatch>()
   const { address, chainId, balances } = useSelector((state: RootState) => state.wallet)
   const { fromToken, toToken, fromAmount, routes, isLoading, error } = useSelector((state: RootState) => state.swap)
   
@@ -33,12 +33,14 @@ export function SwapForm() {
     )
     
     if (!balance) return '0.00'
-    return formatBalance(balance.amount, balance.decimals)
+    return formatBalance(balance.balance, balance.decimals)
   }
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
-    dispatch(setFromAmount(value))
+    if (value === '' || !isNaN(parseFloat(value))) {
+      dispatch(setFromAmount(value))
+    }
   }
 
   // Check if we can find routes
@@ -50,21 +52,27 @@ export function SwapForm() {
   )
 
   const handleFindRoutes = async () => {
-    if (!canFindRoutes) return
+    if (!canFindRoutes || !fromToken || !toToken || !address) return
     
     try {
       dispatch(setLoading(true))
       dispatch(setError(null))
       
       const response = await scamsquatchApi.getQuote({
-        fromToken,
-        toToken,
-        amount: fromAmount,
-        chainId
+        fromChain: chainId || 1, // Default to Ethereum mainnet
+        toChain: chainId || 1, // For MVP, same chain swaps only
+        fromToken: fromToken.address,
+        toToken: toToken.address,
+        fromAmount,
+        userAddress: address
       })
 
-      setQuoteResponse(response)
-      dispatch(setRoutes(response.data.routes))
+      if (response?.data) {
+        setQuoteResponse(response)
+        dispatch(setRoutes(response.data.routes))
+      } else {
+        dispatch(setError('Invalid response from server'))
+      }
     } catch (err) {
       console.error('Error getting quote:', err)
       dispatch(setError('Failed to find routes. Please try again.'))
@@ -170,7 +178,7 @@ export function SwapForm() {
       </Card>
 
       {/* Routes Display */}
-      {routes.length > 0 && quoteResponse && (
+      {routes.length > 0 && quoteResponse?.data && (
         <RouteList routes={routes} riskAssessments={quoteResponse.data.riskAssessments} />
       )}
 
