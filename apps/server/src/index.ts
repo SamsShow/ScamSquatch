@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { quoteRoutes } from './api/routes/quoteRoutes';
 import { bridgeRoutes } from './api/routes/bridgeRoutes';
+import { simulationRoutes } from './api/routes/simulationRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +31,7 @@ app.get('/', (req, res) => {
 // API routes
 app.use('/api/v1', quoteRoutes);
 app.use('/api/v1', bridgeRoutes);
+app.use('/api/v1', simulationRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

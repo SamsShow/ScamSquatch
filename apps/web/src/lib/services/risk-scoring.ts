@@ -95,6 +95,12 @@ const SCAM_PATTERNS = [
 ]
 
 class RiskScoringService {
+  // Check if a protocol is trusted
+  isProtocolTrusted(protocol: string): boolean {
+    return TRUSTED_PROTOCOLS.some(trusted => 
+      protocol.toLowerCase().includes(trusted.toLowerCase())
+    )
+  }
   // Assess risk for a single route
   assessRouteRisk(route: RouteInfo): RiskAssessment {
     const factors: string[] = []

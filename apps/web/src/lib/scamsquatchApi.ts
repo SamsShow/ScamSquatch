@@ -75,6 +75,66 @@ class ScamSquatchAPI {
     }
   }
 
+  // Simulate transaction
+  async simulateTransaction(params: {
+    routeId: string;
+    userAddress: string;
+    fromAmount: string;
+    toAmount: string;
+    slippage: number;
+  }): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      console.log('ScamSquatch API: Simulating transaction for:', {
+        routeId: params.routeId,
+        userAddress: params.userAddress.substring(0, 10) + '...',
+        fromAmount: params.fromAmount,
+        toAmount: params.toAmount,
+        slippage: params.slippage
+      });
+
+      const response = await this.request('/simulate', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      });
+
+      return response;
+    } catch (error) {
+      console.error('Failed to simulate transaction:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to simulate transaction'
+      };
+    }
+  }
+
+  // Get improved gas estimate
+  async getGasEstimate(params: {
+    routeId: string;
+    userAddress: string;
+    fromAmount: string;
+  }): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      console.log('ScamSquatch API: Getting gas estimate for:', {
+        routeId: params.routeId,
+        userAddress: params.userAddress.substring(0, 10) + '...',
+        fromAmount: params.fromAmount
+      });
+
+      const response = await this.request('/simulate/gas', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      });
+
+      return response;
+    } catch (error) {
+      console.error('Failed to get gas estimate:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get gas estimate'
+      };
+    }
+  }
+
   // Health check
   async healthCheck(): Promise<{ message: string; version: string; timestamp: string }> {
     try {
