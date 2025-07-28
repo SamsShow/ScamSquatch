@@ -14,6 +14,7 @@ export const config = getDefaultConfig({
   appName: 'ScamSquatch',
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
   chains: chains,
+  ssr: true, // Enable SSR support
   transports: {
     [sepolia.id]: http(sepoliaRpcUrl),
     [polygonAmoy.id]: http(amoyRpcUrl),

@@ -15,7 +15,7 @@ import type { RootState } from '@/store'
 
 export function SwapForm() {
   const dispatch = useDispatch()
-  const { isConnected, address, chainId, balances } = useSelector((state: RootState) => state.wallet)
+  const { address, chainId, balances } = useSelector((state: RootState) => state.wallet)
   const { fromToken, toToken, fromAmount, routes, isLoading, error } = useSelector((state: RootState) => state.swap)
   
   const [showFromTokenSelector, setShowFromTokenSelector] = useState(false)
@@ -32,68 +32,51 @@ export function SwapForm() {
            b.symbol === fromToken.symbol
     )
     
-    if (!balance) {
-      // Check if we're still loading the balance
-      const isBalanceLoading = isConnected && address && chainId && fromToken
-      return isBalanceLoading ? 'Loading...' : '0.00'
-    }
-    
-    return formatBalance(balance.balance)
+    if (!balance) return '0.00'
+    return formatBalance(balance.amount, balance.decimals)
   }
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // @ts-expect-error - Redux action creators are properly typed
-    dispatch(setFromAmount(e.target.value))
+    const value = e.target.value
+    dispatch(setFromAmount(value))
   }
 
+  // Check if we can find routes
+  const canFindRoutes = Boolean(
+    fromToken && 
+    toToken && 
+    fromAmount && 
+    parseFloat(fromAmount) > 0
+  )
+
   const handleFindRoutes = async () => {
-    if (!isConnected || !address || !fromToken || !toToken || !fromAmount) {
-      return
-    }
-
+    if (!canFindRoutes) return
+    
     try {
-      // @ts-expect-error - Redux action creators are properly typed
       dispatch(setLoading(true))
-      // @ts-expect-error - Redux action creators are properly typed
       dispatch(setError(null))
-
-      // Convert amount to wei
-      const amountInWei = (parseFloat(fromAmount) * Math.pow(10, fromToken.decimals)).toString()
-
+      
       const response = await scamsquatchApi.getQuote({
-        fromChain: fromToken.chainId,
-        toChain: toToken.chainId,
-        fromToken: fromToken.address,
-        toToken: toToken.address,
-        fromAmount: amountInWei,
-        userAddress: address,
+        fromToken,
+        toToken,
+        amount: fromAmount,
+        chainId
       })
 
-      if (!response.success || !response.data) {
-        // @ts-expect-error - Redux action creators are properly typed
-        dispatch(setError(response.error || 'Failed to get quote'))
-        return
-      }
-
       setQuoteResponse(response)
-
-      // @ts-expect-error - Redux action creators are properly typed
       dispatch(setRoutes(response.data.routes))
-    } catch (error) {
-      // @ts-expect-error - Redux action creators are properly typed
-      dispatch(setError((error as Error).message))
+    } catch (err) {
+      console.error('Error getting quote:', err)
+      dispatch(setError('Failed to find routes. Please try again.'))
     } finally {
-      // @ts-expect-error - Redux action creators are properly typed
       dispatch(setLoading(false))
     }
   }
 
-  const canFindRoutes = isConnected && fromToken && toToken && fromAmount && parseFloat(fromAmount) > 0
-
   return (
     <div className="space-y-6">
       {/* Balance Fetchers - These components fetch balances but don't render anything */}
-      {isConnected && address && chainId && (
+      {address && chainId && (
         <>
           {/* Fetch ETH balance */}
           <BalanceFetcher 
@@ -175,9 +158,7 @@ export function SwapForm() {
             disabled={!canFindRoutes || isLoading}
             onClick={handleFindRoutes}
           >
-            {!isConnected
-              ? 'Connect Wallet'
-              : !fromToken || !toToken
+            {!fromToken || !toToken
               ? 'Select Tokens'
               : !fromAmount || parseFloat(fromAmount) <= 0
               ? 'Enter Amount'
@@ -202,4 +183,4 @@ export function SwapForm() {
       )}
     </div>
   )
-} 
+}
