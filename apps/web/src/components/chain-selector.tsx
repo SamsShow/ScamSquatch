@@ -3,16 +3,17 @@
 import { Chain } from 'viem'
 import { Button } from '@/components/ui/button'
 import { chains } from '@/config/wagmi'
-import { useAppDispatch, useAppSelector } from '@/store'
+import { useDispatch, useSelector } from 'react-redux'
 import { setChain } from '@/store/slices/swap'
+import type { RootState } from '@/store'
 
 interface ChainSelectorProps {
   type: 'from' | 'to'
 }
 
 export function ChainSelector({ type }: ChainSelectorProps) {
-  const dispatch = useAppDispatch()
-  const { fromChain, toChain } = useAppSelector((state) => state.swap)
+  const dispatch = useDispatch()
+  const { fromChain, toChain } = useSelector((state: RootState) => state.swap)
 
   const handleChainSelect = (chain: Chain) => {
     (dispatch as any)(setChain({ type, chain }))
