@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useAppDispatch, useAppSelector } from '@/store'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -9,15 +9,14 @@ import { setFromAmount, setLoading, setRoutes, setError } from '@/store/slices/s
 import { ChainSelector } from '@/components/chain-selector'
 import { scamsquatchApi, type QuoteResponse } from '@/lib/scamsquatchApi'
 import { TokenSelector } from '@/components/token-selector'
-import { RouteList } from '@/components/route-list'
+import { EnhancedRouteList } from '@/components/enhanced-route-list'
 import { BalanceFetcher } from '@/components/balance-fetcher'
 import { formatBalance } from '@/lib/utils'
-import type { RootState, AppDispatch } from '@/store'
 
 export function SwapForm() {
-  const dispatch = useDispatch<AppDispatch>()
-  const { address, chainId, balances } = useSelector((state: RootState) => state.wallet)
-  const { fromToken, toToken, fromAmount, routes, isLoading, error, fromChain, toChain } = useSelector((state: RootState) => state.swap)
+  const dispatch = useAppDispatch()
+  const { address, chainId, balances } = useAppSelector((state) => state.wallet)
+  const { fromToken, toToken, fromAmount, routes, isLoading, error, fromChain, toChain } = useAppSelector((state) => state.swap)
   
   const [showFromTokenSelector, setShowFromTokenSelector] = useState(false)
   const [showToTokenSelector, setShowToTokenSelector] = useState(false)
@@ -40,7 +39,7 @@ export function SwapForm() {
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     if (value === '' || !isNaN(parseFloat(value))) {
-      dispatch(setFromAmount(value))
+      (dispatch as any)(setFromAmount(value))
     }
   }
 
@@ -58,8 +57,8 @@ export function SwapForm() {
     if (!canFindRoutes || !fromToken || !toToken || !address || !fromChain || !toChain) return
     
     try {
-      dispatch(setLoading(true))
-      dispatch(setError(null))
+      (dispatch as any)(setLoading(true))
+      (dispatch as any)(setError(null))
       
       const response = await scamsquatchApi.getQuote({
         fromChain: fromChain.id,
@@ -72,15 +71,15 @@ export function SwapForm() {
 
       if (response?.data) {
         setQuoteResponse(response)
-        dispatch(setRoutes(response.data.routes))
+        (dispatch as any)(setRoutes(response.data.routes))
       } else {
-        dispatch(setError('Invalid response from server'))
+        (dispatch as any)(setError('Invalid response from server'))
       }
     } catch (err) {
       console.error('Error getting quote:', err)
-      dispatch(setError('Failed to find routes. Please try again.'))
+      (dispatch as any)(setError('Failed to find routes. Please try again.'))
     } finally {
-      dispatch(setLoading(false))
+      (dispatch as any)(setLoading(false))
     }
   }
 
@@ -201,7 +200,7 @@ export function SwapForm() {
 
       {/* Routes Display */}
       {routes.length > 0 && quoteResponse?.data && (
-        <RouteList routes={routes} riskAssessments={quoteResponse.data.riskAssessments} />
+        <EnhancedRouteList routes={routes} riskAssessments={quoteResponse.data.riskAssessments} />
       )}
 
       {/* Token Selectors */}

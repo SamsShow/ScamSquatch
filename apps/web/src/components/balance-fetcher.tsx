@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useDispatch } from 'react-redux'
+import { useAppDispatch } from '@/store'
 import { useBalance } from 'wagmi'
 import { setBalance } from '@/store/slices/wallet'
 import { formatEther } from 'viem'
@@ -21,13 +21,12 @@ export function BalanceFetcher({
   symbol = 'ETH', 
   decimals = 18 
 }: BalanceFetcherProps) {
-  const dispatch = useDispatch()
+  const dispatch = useAppDispatch()
   
   const { data: balanceData, isLoading, error } = useBalance({
     address: address as `0x${string}`,
     chainId,
     token: tokenAddress as `0x${string}` | undefined,
-    watch: true,
   })
 
   useEffect(() => {

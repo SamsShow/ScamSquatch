@@ -1,5 +1,19 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/create-next-app).
 
+## Environment Setup
+
+Before running the development server, you need to set up your environment variables:
+
+1. **Get a WalletConnect Project ID:**
+   - Go to [WalletConnect Cloud](https://cloud.walletconnect.com/)
+   - Sign up or log in
+   - Create a new project
+   - Copy the project ID
+
+2. **Configure Environment Variables:**
+   - Edit the `.env.local` file in this directory
+   - Replace `your_walletconnect_project_id_here` with your actual WalletConnect project ID
+
 ## Getting Started
 
 First, run the development server:

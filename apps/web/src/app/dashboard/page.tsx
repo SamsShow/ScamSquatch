@@ -2,6 +2,7 @@
 
 import { SwapForm } from "@/components/swap-form";
 import { RiskAnalysis } from "@/components/risk-analysis";
+import { EnhancedSwapExecution } from "@/components/enhanced-swap-execution";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -60,11 +61,17 @@ export default function DashboardPage() {
             <SwapForm />
           </Card>
 
-          {/* Risk Analysis */}
-          <Card className="p-6 bg-card border-border">
-            <h2 className="text-2xl font-semibold mb-6">Risk Analysis</h2>
-            <RiskAnalysis />
-          </Card>
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Risk Analysis */}
+            <Card className="p-6 bg-card border-border">
+              <h2 className="text-2xl font-semibold mb-6">Risk Analysis</h2>
+              <RiskAnalysis />
+            </Card>
+
+            {/* Enhanced Swap Execution */}
+            <EnhancedSwapExecution />
+          </div>
         </div>
       </main>
     </div>
