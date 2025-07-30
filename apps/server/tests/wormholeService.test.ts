@@ -1,0 +1,122 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { WormholeService } from '../src/services/wormholeService';
+import { providers } from 'ethers';
+
+describe('WormholeService', () => {
+  let wormholeService: WormholeService;
+  let mockProvider: providers.Provider;
+
+  beforeEach(() => {
+    // Mock environment variables
+    process.env.SEPOLIA_RPC_URL = 'https://sepolia.example.com';
+    process.env.WORMHOLE_CORE_BRIDGE_ADDRESS = '0x1234567890123456789012345678901234567890';
+    process.env.WORMHOLE_TOKEN_BRIDGE_ADDRESS = '0x2345678901234567890123456789012345678901';
+
+    // Create mock provider with realistic gas prices
+    mockProvider = {
+      getFeeData: vi.fn().mockResolvedValue({
+        gasPrice: '50000000000' // 50 Gwei
+      })
+    } as any;
+
+    // Mock JsonRpcProvider constructor
+    vi.spyOn(providers, 'JsonRpcProvider').mockImplementation(() => mockProvider);
+
+    wormholeService = new WormholeService();
+  });
+
+  describe('estimateBridgeFee', () => {
+    it('should return a reasonable gas fee estimate', async () => {
+      const fee = await wormholeService.estimateBridgeFee(11155111, 2);
+      const feeEth = BigInt(fee) / BigInt('1000000000000000000');
+      
+      expect(fee).toBeDefined();
+      expect(typeof fee).toBe('string');
+      // Fee should be between 0.001 and 1 ETH
+      expect(feeEth).toBeGreaterThan(0.001);
+      expect(feeEth).toBeLessThan(1);
+    });
+
+    it('should handle provider errors gracefully', async () => {
+      mockProvider.getFeeData = vi.fn().mockRejectedValue(new Error('Network error'));
+      await expect(wormholeService.estimateBridgeFee(11155111, 2))
+        .rejects.toThrow('Failed to estimate bridge fee: Network error');
+    });
+
+    it('should handle null gas price', async () => {
+      mockProvider.getFeeData = vi.fn().mockResolvedValue({ gasPrice: null });
+      await expect(wormholeService.estimateBridgeFee(11155111, 2))
+        .rejects.toThrow('Failed to estimate bridge fee: Failed to get gas price');
+    });
+  });
+
+  describe('initiateBridgeTransfer', () => {
+    const validParams = {
+      fromChain: 11155111,
+      toChain: 2,
+      fromToken: '0x0000000000000000000000000000000000000000',
+      toToken: '0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>',
+      amount: '1000000000000000000',
+      senderAddress: '0x1234567890123456789012345678901234567890',
+      recipientAddress: '0x1234567890abcdef'
+    };
+
+    it('should generate consistent txHash for same parameters', async () => {
+      const result1 = await wormholeService.initiateBridgeTransfer(validParams);
+      const result2 = await wormholeService.initiateBridgeTransfer(validParams);
+      
+      expect(result1.txHash).toMatch(/^0x[a-f0-9]{40}$/);
+      expect(result1.txHash).toBe(result2.txHash);
+    });
+
+    it('should reject invalid sender address', async () => {
+      const invalidParams = {
+        ...validParams,
+        senderAddress: 'invalid-address'
+      };
+
+      await expect(wormholeService.initiateBridgeTransfer(invalidParams))
+        .rejects.toThrow('Failed to initiate bridge transfer: Invalid sender address');
+    });
+  });
+
+  describe('getBridgeStatus', () => {
+    it('should handle invalid transaction hash', async () => {
+      await expect(wormholeService.getBridgeStatus('invalid-hash', 11155111, 2))
+        .rejects.toThrow('Failed to get bridge status: Invalid transaction hash format');
+    });
+
+    it('should return completed status for old transactions', async () => {
+      // Create txHash with timestamp from 10 minutes ago
+      const timestamp = Math.floor((Date.now() - 600000) / 1000);
+      const txHash = `0x${timestamp.toString(16)}${'0'.repeat(32)}`;
+      
+      const status = await wormholeService.getBridgeStatus(txHash, 11155111, 2);
+      expect(status.status).toBe('completed');
+      expect(status.sourceChainTx).toBe(txHash);
+      expect(status.targetChainTx).toBeDefined();
+      expect(status.targetChainTx).not.toBe(txHash);
+    });
+
+    it('should return failed status for transactions ending in 00', async () => {
+      const txHash = `0x${Date.now().toString(16)}00`;
+      const status = await wormholeService.getBridgeStatus(txHash, 11155111, 2);
+      
+      expect(status.status).toBe('failed');
+      expect(status.sourceChainTx).toBe(txHash);
+      expect(status.error).toBe('Bridge transfer failed');
+    });
+
+    it('should return pending status for recent transactions', async () => {
+      // Create txHash with current timestamp
+      const timestamp = Math.floor(Date.now() / 1000);
+      const txHash = `0x${timestamp.toString(16)}${'1'.repeat(32)}`;
+      
+      const status = await wormholeService.getBridgeStatus(txHash, 11155111, 2);
+      expect(status.status).toBe('pending');
+      expect(status.sourceChainTx).toBe(txHash);
+      expect(status.targetChainTx).toBeUndefined();
+      expect(status.error).toBeUndefined();
+    });
+  });
+});

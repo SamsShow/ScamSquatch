@@ -42,7 +42,7 @@ All engineering work must preserve this separation of concerns.
 
 ---
 
-## 3. Repository Layout (🚨 keep in sync!)
+## 3. Repository Layout (for reference)
 ```
 frontend/          # React client
   ├─ src/

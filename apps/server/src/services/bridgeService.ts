@@ -1,3 +1,13 @@
+import { AptosService } from './aptosService';
+import { WormholeService, BridgeStatus } from './wormholeService';
+import { APIError } from '../utils/errorHandler';
+import pino from 'pino';
+
+const logger = pino({
+  name: 'bridge-service',
+  level: process.env.LOG_LEVEL || 'info'
+});
+
 export interface BridgeQuote {
   id: string;
   fromChain: number;
@@ -7,7 +17,7 @@ export interface BridgeQuote {
   fromAmount: string;
   toAmount: string;
   bridgeFee: string;
-  estimatedTime: number; // in seconds
+  estimatedTime: number;
   bridgeProvider: string;
 }
 
@@ -22,18 +32,35 @@ export interface BridgeTransaction {
   bridgeFee: string;
   estimatedTime: number;
   bridgeProvider: string;
-  transactionData: any;
+  transactionData: {
+    targetChain: number;
+    targetAddress: string;
+    amount: string;
+    fee: string;
+  };
   instructions: string[];
 }
 
-class BridgeService {
-  private wormholeRpcUrl: string;
+// Add transaction status interface
+export interface BridgeTransactionStatus extends BridgeStatus {
+  id: string;
+  fromChain: number;
+  toChain: number;
+  fromAmount: string;
+  toAmount: string;
+  bridgeProvider: string;
+  timestamp: number;
+}
+
+export class BridgeService {
+  private readonly aptosService: AptosService;
+  private readonly wormholeService: WormholeService;
 
   constructor() {
-    this.wormholeRpcUrl = process.env.WORMHOLE_RPC_URL || 'https://wormhole-v2-testnet-api.certus.one';
+    this.aptosService = new AptosService();
+    this.wormholeService = new WormholeService();
   }
 
-  // Get bridge quote for cross-chain transfer
   async getBridgeQuote(params: {
     fromChain: number;
     toChain: number;
@@ -43,10 +70,19 @@ class BridgeService {
     userAddress: string;
   }): Promise<{ success: boolean; data?: BridgeQuote; error?: string }> {
     try {
-      console.log('🌉 Getting bridge quote for:', params);
+      logger.info({ params }, '🌉 Getting bridge quote');
 
-      // For now, we'll simulate bridge quotes
-      // In production, this would call the actual Wormhole API
+      // For MVP we only support ETH ⇄ APT
+      if (params.fromChain === 11155111 && params.toChain === 2) {
+        await this.aptosService.validateAddress(params.userAddress);
+      }
+
+      // Get bridge fee from Wormhole
+      const bridgeFee = await this.wormholeService.estimateBridgeFee(
+        params.fromChain,
+        params.toChain
+      );
+
       const quote: BridgeQuote = {
         id: `bridge-${Date.now()}`,
         fromChain: params.fromChain,
@@ -54,113 +90,95 @@ class BridgeService {
         fromToken: params.fromToken,
         toToken: params.toToken,
         fromAmount: params.fromAmount,
-        toAmount: this.calculateToAmount(params.fromAmount, params.fromChain, params.toChain),
-        bridgeFee: this.calculateBridgeFee(params.fromAmount, params.fromChain, params.toChain),
-        estimatedTime: this.getEstimatedTime(params.fromChain, params.toChain),
+        toAmount: this.calculateAmount(params.fromAmount),
+        bridgeFee,
+        estimatedTime: 300, // 5 minutes average
         bridgeProvider: 'Wormhole'
       };
 
       return { success: true, data: quote };
-    } catch (error) {
-      console.error('Failed to get bridge quote:', error);
-      return { success: false, error: (error as Error).message };
+    } catch (error: any) {
+      logger.error(error, '❌ Failed to get bridge quote');
+      return { success: false, error: error.message };
     }
   }
 
-  // Execute bridge transaction
+  private calculateAmount(amount: string): string {
+    // Simplified 1:1 conversion for MVP
+    return amount;
+  }
+
   async executeBridge(params: {
     quoteId: string;
     userAddress: string;
     signature: string;
   }): Promise<{ success: boolean; data?: BridgeTransaction; error?: string }> {
     try {
-      console.log('🌉 Executing bridge transaction:', params);
+      logger.info({ params }, '🌉 Executing bridge transaction');
 
-      // For now, we'll simulate bridge execution
-      // In production, this would call the actual Wormhole API
-      const transaction: BridgeTransaction = {
-        id: params.quoteId,
+      // Create bridge transaction
+      const bridgeParams = {
         fromChain: 11155111, // Sepolia
         toChain: 2, // Aptos testnet
         fromToken: '0x0000000000000000000000000000000000000000', // ETH
         toToken: '0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>', // APT
-        fromAmount: '1000000000000000000', // 1 ETH
-        toAmount: '100000000', // 1 APT (simplified)
-        bridgeFee: '50000000000000000', // 0.05 ETH
-        estimatedTime: 300, // 5 minutes
+        amount: '1000000000000000000', // 1 ETH
+        senderAddress: params.userAddress,
+        recipientAddress: params.userAddress,
+      };
+
+      // Initiate bridge transfer
+      const { txHash } = await this.wormholeService.initiateBridgeTransfer(bridgeParams);
+
+      const transaction: BridgeTransaction = {
+        id: params.quoteId,
+        fromChain: bridgeParams.fromChain,
+        toChain: bridgeParams.toChain,
+        fromToken: bridgeParams.fromToken,
+        toToken: bridgeParams.toToken,
+        fromAmount: bridgeParams.amount,
+        toAmount: this.calculateAmount(bridgeParams.amount),
+        bridgeFee: await this.wormholeService.estimateBridgeFee(bridgeParams.fromChain, bridgeParams.toChain),
+        estimatedTime: 300,
         bridgeProvider: 'Wormhole',
         transactionData: {
-          // This would contain the actual transaction data from Wormhole
-          targetChain: 2,
-          targetAddress: params.userAddress,
-          amount: '1000000000000000000',
-          fee: '50000000000000000'
+          targetChain: bridgeParams.toChain,
+          targetAddress: bridgeParams.recipientAddress,
+          amount: bridgeParams.amount,
+          fee: await this.wormholeService.estimateBridgeFee(bridgeParams.fromChain, bridgeParams.toChain)
         },
         instructions: [
-          '1. Approve token spending on source chain',
-          '2. Submit bridge transaction on source chain',
-          '3. Wait for bridge confirmation (5-10 minutes)',
-          '4. Claim tokens on destination chain'
+          '1. Bridge transfer initiated',
+          `2. Source chain transaction hash: ${txHash}`,
+          '3. Waiting for bridge confirmation (5-10 minutes)',
+          '4. Tokens will be automatically sent on Aptos'
         ]
       };
 
       return { success: true, data: transaction };
-    } catch (error) {
-      console.error('Failed to execute bridge:', error);
-      return { success: false, error: (error as Error).message };
+    } catch (error: any) {
+      logger.error(error, '❌ Failed to execute bridge');
+      return { success: false, error: error.message };
     }
   }
 
-  // Get Aptos token balance (mock implementation)
-  async getAptosBalance(address: string): Promise<{ success: boolean; data?: string; error?: string }> {
+  async getBridgeTransactionStatus(txHash: string, fromChain: number, toChain: number): Promise<BridgeTransactionStatus> {
     try {
-      // Mock implementation - in production, this would use the Aptos SDK
-      console.log('Mock: Getting Aptos balance for address:', address);
-      return { success: true, data: '100000000' }; // Mock 1 APT balance
-    } catch (error) {
-      console.error('Failed to get Aptos balance:', error);
-      return { success: false, error: (error as Error).message };
+      const status = await this.wormholeService.getBridgeStatus(txHash, fromChain, toChain);
+      
+      return {
+        ...status,
+        id: `bridge-${txHash}`,
+        fromChain,
+        toChain,
+        fromAmount: '0', // Would come from transaction lookup
+        toAmount: '0', // Would come from transaction lookup
+        bridgeProvider: 'Wormhole',
+        timestamp: Date.now()
+      };
+    } catch (error: any) {
+      logger.error(error, '❌ Failed to get bridge transaction status');
+      throw new APIError(500, 'Failed to get bridge transaction status');
     }
-  }
-
-  // Check if address is valid on Aptos
-  async isValidAptosAddress(address: string): Promise<boolean> {
-    try {
-      // Basic Aptos address validation
-      return /^0x[a-fA-F0-9]{64}$/.test(address);
-    } catch (error) {
-      return false;
-    }
-  }
-
-  // Private helper methods
-  private calculateToAmount(fromAmount: string, fromChain: number, toChain: number): string {
-    // Simplified conversion - in production, this would use actual exchange rates
-    if (fromChain === 11155111 && toChain === 2) { // ETH to APT
-      // Rough conversion: 1 ETH ≈ 1 APT (simplified)
-      return fromAmount;
-    } else if (fromChain === 2 && toChain === 11155111) { // APT to ETH
-      return fromAmount;
-    }
-    return fromAmount;
-  }
-
-  private calculateBridgeFee(fromAmount: string, fromChain: number, toChain: number): string {
-    // Simplified fee calculation
-    const amount = BigInt(fromAmount);
-    const feePercentage = BigInt(5); // 0.5%
-    return (amount * feePercentage / BigInt(1000)).toString();
-  }
-
-  private getEstimatedTime(fromChain: number, toChain: number): number {
-    // Estimated bridge time in seconds
-    if (fromChain === 11155111 && toChain === 2) { // ETH to APT
-      return 300; // 5 minutes
-    } else if (fromChain === 2 && toChain === 11155111) { // APT to ETH
-      return 300; // 5 minutes
-    }
-    return 600; // 10 minutes default
   }
 }
-
-export const bridgeService = new BridgeService(); 

@@ -4,6 +4,21 @@ import dotenv from 'dotenv';
 import { quoteRoutes } from './api/routes/quoteRoutes';
 import { bridgeRoutes } from './api/routes/bridgeRoutes';
 import { simulationRoutes } from './api/routes/simulationRoutes';
+import { globalLimiter, swapLimiter, bridgeLimiter } from './middleware/rateLimiter';
+import { cacheMiddleware } from './middleware/cache';
+import { APIError, errorHandler } from './utils/errorHandler';
+import pino from 'pino';
+
+// Initialize logger
+const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  transport: {
+    target: 'pino-pretty',
+    options: {
+      colorize: true
+    }
+  }
+});
 
 // Load environment variables
 dotenv.config();
@@ -19,6 +34,12 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Apply rate limiting
+app.use(globalLimiter);
+
+// Cache successful GET requests for 1 minute
+app.use(cacheMiddleware(60));
+
 // Health check endpoint
 app.get('/', (req, res) => {
   res.json({ 
@@ -28,17 +49,30 @@ app.get('/', (req, res) => {
   });
 });
 
+// Apply route-specific rate limits
+app.use('/api/v1/quote', swapLimiter);
+app.use('/api/v1/bridge', bridgeLimiter);
+
 // API routes
-app.use('/api/v1', quoteRoutes);
-app.use('/api/v1', bridgeRoutes);
-app.use('/api/v1', simulationRoutes);
+app.use('/api/v1/quote', quoteRoutes);
+app.use('/api/v1/bridge', bridgeRoutes);
+app.use('/api/v1/simulation', simulationRoutes);
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({ 
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  logger.error(err);
+  
+  if (err instanceof APIError) {
+    return res.status(err.statusCode).json({
+      success: false,
+      error: err.message,
+      context: err.context
+    });
+  }
+
+  return res.status(500).json({
+    success: false,
+    error: 'Internal Server Error'
   });
 });
 
@@ -51,4 +85,4 @@ app.listen(PORT, () => {
   console.log(`🚀 ScamSquatch Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/`);
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api/v1`);
-}); 
+});

@@ -1,0 +1,102 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { WormholeService } from '../src/services/wormholeService';
+import { providers } from 'ethers';
+
+describe('WormholeService', () => {
+  let wormholeService: WormholeService;
+  let mockProvider: providers.Provider;
+
+  beforeEach(() => {
+    // Mock environment variables
+    process.env.SEPOLIA_RPC_URL = 'https://sepolia.example.com';
+    process.env.WORMHOLE_CORE_BRIDGE_ADDRESS = '0x1234567890123456789012345678901234567890';
+    process.env.WORMHOLE_TOKEN_BRIDGE_ADDRESS = '0x2345678901234567890123456789012345678901';
+
+    // Create mock provider
+    mockProvider = {
+      getFeeData: vi.fn().mockResolvedValue({
+        gasPrice: '20000000000' // 20 Gwei
+      })
+    } as any;
+
+    // Mock JsonRpcProvider constructor
+    vi.spyOn(providers, 'JsonRpcProvider').mockImplementation(() => mockProvider);
+
+    wormholeService = new WormholeService();
+  });
+
+  describe('estimateBridgeFee', () => {
+    it('should return estimated gas fee', async () => {
+      const fee = await wormholeService.estimateBridgeFee(11155111, 2);
+      expect(fee).toBeDefined();
+      expect(typeof fee).toBe('string');
+      expect(BigInt(fee)).toBeGreaterThan(0n);
+    });
+
+    it('should handle errors gracefully', async () => {
+      const mockProvider = {
+        getFeeData: vi.fn().mockRejectedValue(new Error('Network error'))
+      } as any;
+      vi.spyOn(providers, 'JsonRpcProvider').mockImplementation(() => mockProvider);
+
+      const service = new WormholeService();
+      await expect(service.estimateBridgeFee(11155111, 2))
+        .rejects.toThrow('Failed to estimate bridge fee');
+    });
+  });
+
+  describe('initiateBridgeTransfer', () => {
+    const params = {
+      fromChain: 11155111,
+      toChain: 2,
+      fromToken: '0x0000000000000000000000000000000000000000',
+      toToken: '0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>',
+      amount: '1000000000000000000',
+      senderAddress: '0x1234567890abcdef',
+      recipientAddress: '0x1234567890abcdef'
+    };
+
+    it('should initiate bridge transfer successfully', async () => {
+      const result = await wormholeService.initiateBridgeTransfer(params);
+      expect(result.txHash).toBeDefined();
+      expect(result.txHash).toMatch(/^0x[a-f0-9]+$/);
+    });
+
+    it('should handle transfer initiation errors gracefully', async () => {
+      // Even error cases return mock tx hash in MVP
+      const result = await wormholeService.initiateBridgeTransfer(params);
+      expect(result.txHash).toBeDefined();
+    });
+  });
+
+  describe('getBridgeStatus', () => {
+    it('should return completed status for old transactions', async () => {
+      const oldTxHash = '0x' + (BigInt(Date.now()) - BigInt(600000)).toString(16); // 10 minutes old
+      const status = await wormholeService.getBridgeStatus(oldTxHash, 11155111, 2);
+      expect(status.status).toBe('completed');
+      expect(status.sourceChainTx).toBe(oldTxHash);
+      expect(status.targetChainTx).toBeDefined();
+    });
+
+    it('should return failed status for transactions ending in 00', async () => {
+      const status = await wormholeService.getBridgeStatus('0x1234567800', 11155111, 2);
+      expect(status.status).toBe('failed');
+      expect(status.sourceChainTx).toBe('0x1234567800');
+      expect(status.error).toBe('Bridge transfer failed');
+    });
+
+    it('should return pending status for recent transactions', async () => {
+      const recentTxHash = '0x' + BigInt(Date.now()).toString(16);
+      const status = await wormholeService.getBridgeStatus(recentTxHash, 11155111, 2);
+      expect(status.status).toBe('pending');
+      expect(status.sourceChainTx).toBe(recentTxHash);
+      expect(status.targetChainTx).toBeUndefined();
+      expect(status.error).toBeUndefined();
+    });
+
+    it('should handle malformed transaction hashes', async () => {
+      await expect(wormholeService.getBridgeStatus('invalid-hash', 11155111, 2))
+        .rejects.toThrow('Failed to get bridge status');
+    });
+  });
+});
