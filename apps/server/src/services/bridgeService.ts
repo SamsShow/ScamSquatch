@@ -3,6 +3,15 @@ import { WormholeService, BridgeStatus } from './wormholeService';
 import { APIError } from '../utils/errorHandler';
 import pino from 'pino';
 
+// For testing
+export function createMockWormholeService() {
+  return {
+    estimateBridgeFee: vi.fn(),
+    initiateBridgeTransfer: vi.fn(),
+    getBridgeStatus: vi.fn()
+  };
+}
+
 const logger = pino({
   name: 'bridge-service',
   level: process.env.LOG_LEVEL || 'info'
@@ -54,12 +63,13 @@ export interface BridgeTransactionStatus extends BridgeStatus {
 
 export class BridgeService {
   private readonly aptosService: AptosService;
-  private readonly wormholeService: WormholeService;
-
-  constructor() {
-    this.aptosService = new AptosService();
-    this.wormholeService = new WormholeService();
-  }
+  private readonly wormholeService: WormholeService;    constructor(
+      mockAptosService?: AptosService,
+      mockWormholeService?: WormholeService
+    ) {
+      this.aptosService = mockAptosService || new AptosService();
+      this.wormholeService = mockWormholeService || new WormholeService();
+    }
 
   async getBridgeQuote(params: {
     fromChain: number;

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { BridgeService } from '../src/services/bridgeService';
+import { BridgeService, createMockWormholeService } from '../src/services/bridgeService';
+import { vi } from 'vitest';
 import { AptosService } from '../src/services/aptosService';
 import { WormholeService } from '../src/services/wormholeService';
 
@@ -28,37 +29,80 @@ vi.mock('../src/services/aptosService', () => ({
   })),
 }));
 
-// Mock WormholeService
-const mockWormholeService = {
-  estimateBridgeFee: vi.fn().mockResolvedValue('50000000000000000'),
-  initiateBridgeTransfer: vi.fn().mockResolvedValue({ txHash: `0x${Math.random().toString(16).slice(2)}` }),
-  getBridgeStatus: vi.fn().mockImplementation(async (txHash: string) => ({
-    status: txHash.endsWith('00') ? 'failed' : 'pending',
-    sourceChainTx: txHash,
-    error: txHash.endsWith('00') ? 'Bridge transfer failed' : undefined
-  }))
-};
-
-vi.mock('../src/services/wormholeService', () => ({
-  WormholeService: vi.fn().mockImplementation(() => ({
-    ...mockWormholeService,
+// Create mock factory
+function createMockWormholeInstance(overrides = {}) {
+  const defaultMock = {
+    // Private fields made accessible through prototype
     CHAIN_IDS: {
-      SEPOLIA: 1,
+      SEPOLIA: 11155111,
       APTOS: 2
     },
     sepoliaProvider: {
-      getFeeData: vi.fn().mockResolvedValue({ gasPrice: '20000000000' })
+      getFeeData: vi.fn().mockResolvedValue({
+        gasPrice: {
+          toString: () => '20000000000'
+        }
+      })
     },
     bridgeAddress: '0x1234567890123456789012345678901234567890',
-    tokenBridgeAddress: '0x2345678901234567890123456789012345678901'
-  }))
+    tokenBridgeAddress: '0x2345678901234567890123456789012345678901',
+    // Public methods
+    estimateBridgeFee: vi.fn().mockResolvedValue('50000000000000000'),
+    initiateBridgeTransfer: vi.fn().mockImplementation(async (params) => {
+      const txHash = `0x${Buffer.from(JSON.stringify(params)).toString('hex')}`.slice(0, 66);
+      return { txHash };
+    }),
+    getBridgeStatus: vi.fn().mockImplementation(async (txHash: string) => ({
+      status: txHash.endsWith('00') ? 'failed' : 'pending',
+      sourceChainTx: txHash,
+      targetChainTx: txHash.endsWith('00') ? undefined : `${txHash}1`,
+      error: txHash.endsWith('00') ? 'Bridge transfer failed' : undefined
+    })),
+    // Getters for private fields
+    getChainIds: vi.fn().mockImplementation(function() { return this.CHAIN_IDS; }),
+    getSepoliaProvider: vi.fn().mockImplementation(function() { return this.sepoliaProvider; }),
+    getBridgeAddress: vi.fn().mockImplementation(function() { return this.bridgeAddress; }),
+    getTokenBridgeAddress: vi.fn().mockImplementation(function() { return this.tokenBridgeAddress; })
+  };
+
+  return Object.create(
+    WormholeService.prototype,
+    Object.getOwnPropertyDescriptors({
+      ...defaultMock,
+      ...overrides
+    })
+  );
+}
+
+// Mock WormholeService
+vi.mock('../src/services/wormholeService', () => ({
+  WormholeService: vi.fn().mockImplementation(() => createMockWormholeInstance())
 }));
+
+// Mock specific error cases
+const mockWithError = () => createMockWormholeInstance({
+  estimateBridgeFee: vi.fn().mockRejectedValue(new Error('Failed to estimate fee'))
+});
+
+const mockWithBridgeError = () => createMockWormholeInstance({
+  initiateBridgeTransfer: vi.fn().mockRejectedValue(new Error('Bridge failed'))
+});
 
 describe('BridgeService', () => {
   let bridgeService: BridgeService;
 
   beforeEach(() => {
-    bridgeService = new BridgeService();
+    vi.resetAllMocks();
+    const mockAptosService = {
+      validateAddress: vi.fn().mockImplementation((address: string) => {
+        if (!address.match(/^0x[a-fA-F0-9]{64}$/)) {
+          throw new Error('Invalid Aptos address');
+        }
+        return true;
+      })
+    };
+    const wormholeService = createMockWormholeInstance();
+    bridgeService = new BridgeService(mockAptosService as any, wormholeService);
   });
 
   describe('getBridgeQuote', () => {
@@ -72,6 +116,12 @@ describe('BridgeService', () => {
     };
 
     it('should get quote for ETH to APT bridge', async () => {
+      const wormholeService = createMockWormholeInstance();
+      const mockAptosService = {
+        validateAddress: vi.fn().mockReturnValue(true)
+      };
+      bridgeService = new BridgeService(mockAptosService as any, wormholeService);
+      
       const result = await bridgeService.getBridgeQuote(params);
 
       expect(result.success).toBe(true);
@@ -87,6 +137,17 @@ describe('BridgeService', () => {
     });
 
     it('should validate Aptos address for ETH to APT bridge', async () => {
+      const wormholeService = createMockWormholeInstance();
+      const mockAptosService = {
+        validateAddress: vi.fn().mockImplementation((address: string) => {
+          if (!address.match(/^0x[a-fA-F0-9]{64}$/)) {
+            throw new Error('Invalid Aptos address');
+          }
+          return true;
+        })
+      };
+      bridgeService = new BridgeService(mockAptosService as any, wormholeService);
+
       const invalidParams = { 
         ...params, 
         userAddress: 'invalid-address' 
@@ -100,17 +161,15 @@ describe('BridgeService', () => {
     });
 
     it('should handle bridge fee estimation error', async () => {
-      // Update mock implementation to throw error
-      vi.mocked(WormholeService).mockImplementation(() => ({
-        estimateBridgeFee: vi.fn().mockRejectedValue(new Error('Network error')),
-        initiateBridgeTransfer: vi.fn().mockResolvedValue({ txHash: '0x123' }),
-        getBridgeStatus: vi.fn().mockResolvedValue({ status: 'pending', sourceChainTx: '0x123' })
-      }));
-
+      const mockAptosService = {
+        validateAddress: vi.fn().mockReturnValue(true)
+      };
+      bridgeService = new BridgeService(mockAptosService as any, mockWithError());
+      
       const result = await bridgeService.getBridgeQuote(params);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
+      expect(result.error).toBe('Failed to estimate fee');
     });
   });
 
@@ -136,17 +195,12 @@ describe('BridgeService', () => {
     });
 
     it('should handle bridge initiation failure', async () => {
-      // Update mock implementation to throw error
-      vi.mocked(WormholeService).mockImplementation(() => ({
-        estimateBridgeFee: vi.fn().mockResolvedValue('50000000000000000'),
-        initiateBridgeTransfer: vi.fn().mockRejectedValue(new Error('Bridge failed')),
-        getBridgeStatus: vi.fn().mockResolvedValue({ status: 'pending', sourceChainTx: '0x123' })
-      }));
-
+      bridgeService = new BridgeService(undefined, mockWithBridgeError());
+      
       const result = await bridgeService.executeBridge(params);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
+      expect(result.error).toBe('Bridge failed');
     });
 
     it('should include proper transaction data', async () => {
