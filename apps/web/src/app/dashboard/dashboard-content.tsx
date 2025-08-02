@@ -1,14 +1,69 @@
 'use client';
 
-import { SwapForm } from "@/components/swap-form";
-import { RiskAnalysis } from "@/components/risk-analysis";
-import { EnhancedSwapExecution } from "@/components/enhanced-swap-execution";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAccount, useConfig } from "wagmi";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import dynamic from 'next/dynamic';
+import { SwapForm } from '@/components/swap-form';
+import { RiskAnalysis } from '@/components/risk-analysis';
+import { EnhancedSwapExecution } from '@/components/enhanced-swap-execution';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount, useConfig } from 'wagmi';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+// Dynamically import components to prevent SSR issues
+const QuickStats = dynamic(() => import('@/components/quick-stats').then(mod => mod.QuickStats), {
+  ssr: false,
+  loading: () => (
+    <Card className="p-6 bg-card border-border">
+      <div className="animate-pulse space-y-4">
+        <div className="h-6 w-32 bg-muted rounded" />
+        <div className="grid grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="h-10 w-10 bg-muted rounded" />
+              <div className="h-4 w-20 bg-muted rounded" />
+              <div className="h-6 w-16 bg-muted rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  ),
+});
+
+const TransactionHistory = dynamic(() => import('@/components/transaction-history').then(mod => mod.TransactionHistory), {
+  ssr: false,
+  loading: () => (
+    <Card className="p-6 bg-card border-border">
+      <div className="animate-pulse space-y-4">
+        <div className="h-6 w-48 bg-muted rounded" />
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-20 bg-muted rounded" />
+          ))}
+        </div>
+      </div>
+    </Card>
+  ),
+});
+
+const PortfolioOverview = dynamic(() => import('@/components/portfolio-overview').then(mod => mod.PortfolioOverview), {
+  ssr: false,
+  loading: () => (
+    <Card className="p-6 bg-card border-border">
+      <div className="animate-pulse space-y-4">
+        <div className="h-6 w-40 bg-muted rounded" />
+        <div className="h-16 bg-muted rounded" />
+        <div className="space-y-3">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="h-14 bg-muted rounded" />
+          ))}
+        </div>
+      </div>
+    </Card>
+  ),
+});
 
 export default function DashboardContent() {
   const config = useConfig();
@@ -66,16 +121,31 @@ export default function DashboardContent() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 pt-24">
+      <main className="container mx-auto px-4 pt-24 pb-12">
+        {/* Quick Stats Row */}
+        <div className="mb-8">
+          <QuickStats />
+        </div>
+
+        {/* Main Grid */}
         <div className="grid lg:grid-cols-[2fr,1fr] gap-8">
-          {/* Swap Form */}
-          <Card className="p-6 bg-card border-border">
-            <h2 className="text-2xl font-semibold mb-6">Swap</h2>
-            <SwapForm />
-          </Card>
+          {/* Left Column */}
+          <div className="space-y-8">
+            {/* Swap Form */}
+            <Card className="p-6 bg-card border-border">
+              <h2 className="text-2xl font-semibold mb-6">Cross-Chain Swap</h2>
+              <SwapForm />
+            </Card>
+
+            {/* Transaction History */}
+            <TransactionHistory />
+          </div>
 
           {/* Right Column */}
           <div className="space-y-6">
+            {/* Portfolio Overview */}
+            <PortfolioOverview />
+
             {/* Risk Analysis */}
             <Card className="p-6 bg-card border-border">
               <h2 className="text-2xl font-semibold mb-6">Risk Analysis</h2>

@@ -1,12 +1,24 @@
 'use client'
 
 import { Card } from '@/components/ui/card'
-import { riskScoringService, type RiskAssessment } from '@/lib/services/risk-scoring'
+import { riskScoringService } from '@/lib/services/risk-scoring'
 import type { RouteInfo } from '@/lib/api/1inch'
+import type { CombinedRiskAssessment } from '@/lib/types/risk'
+import { Tooltip } from '@/components/ui/tooltip-new'
+import { InfoIcon, AlertTriangle, ShieldCheck, TrendingDown } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface DetailedRiskBreakdownProps {
   route: RouteInfo
-  riskAssessment: RiskAssessment
+  riskAssessment: CombinedRiskAssessment
+}
+
+interface RiskFactor {
+  name: string
+  weight: number
+  score: number
+  icon: React.ReactNode
+  description: string
 }
 
 export function DetailedRiskBreakdown({ route, riskAssessment }: DetailedRiskBreakdownProps) {
@@ -24,202 +36,173 @@ export function DetailedRiskBreakdown({ route, riskAssessment }: DetailedRiskBre
     return 'bg-green-500/20'
   }
 
-  const getProtocolRiskLevel = (protocol: string) => {
-    const isTrusted = riskScoringService.isProtocolTrusted(protocol)
-    return {
-      level: isTrusted ? 'LOW' : 'HIGH',
-      color: isTrusted ? 'text-green-500' : 'text-red-500',
-      bgColor: isTrusted ? 'bg-green-500/20' : 'bg-red-500/20',
-      icon: isTrusted ? '✅' : '⚠️'
+  const riskFactors: RiskFactor[] = [
+    {
+      name: 'Protocol Security',
+      weight: 30,
+      score: riskAssessment.ai.riskFactors.contractRisk * 100,
+      icon: <ShieldCheck className="w-4 h-4" />,
+      description: 'Evaluates protocol security and contract verification status'
+    },
+    {
+      name: 'Price Impact',
+      weight: 25,
+      score: Math.min(route.priceImpact * 10, 100),
+      icon: <TrendingDown className="w-4 h-4" />,
+      description: 'Measures potential value loss due to market impact'
+    },
+    {
+      name: 'Scam Probability',
+      weight: 25,
+      score: riskAssessment.ai.riskFactors.scamProbability * 100,
+      icon: <AlertTriangle className="w-4 h-4" />,
+      description: 'AI-powered assessment of scam likelihood based on historical data'
+    },
+    {
+      name: 'Liquidity Risk',
+      weight: 20,
+      score: riskAssessment.ai.riskFactors.liquidityRisk * 100,
+      icon: <AlertTriangle className="w-4 h-4" />,
+      description: 'Assesses potential slippage and exit liquidity'
     }
-  }
+  ]
 
-  const getPriceImpactRisk = (impact: number) => {
-    if (impact > 10) return { level: 'CRITICAL', color: 'text-red-500', bgColor: 'bg-red-500/20' }
-    if (impact > 5) return { level: 'HIGH', color: 'text-orange-500', bgColor: 'bg-orange-500/20' }
-    if (impact > 2) return { level: 'MEDIUM', color: 'text-yellow-500', bgColor: 'bg-yellow-500/20' }
-    return { level: 'LOW', color: 'text-green-500', bgColor: 'bg-green-500/20' }
+  const getRecommendations = () => {
+    const recs = []
+    if (route.priceImpact > 5) {
+      recs.push('Consider splitting your trade into smaller amounts to reduce price impact')
+    }
+    if (riskAssessment.ai.riskFactors.contractRisk > 0.5) {
+      recs.push('High contract risk detected - proceed with extreme caution')
+    }
+    if (riskAssessment.ai.riskFactors.liquidityRisk > 0.5) {
+      recs.push('Limited liquidity may affect ability to exit position')
+    }
+    if (riskAssessment.ai.riskFactors.scamProbability > 0.3) {
+      recs.push('Multiple scam indicators detected - consider alternative routes')
+    }
+    return recs
   }
-
-  const priceImpactRisk = getPriceImpactRisk(route.priceImpact)
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Detailed Risk Analysis</h3>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Detailed Risk Analysis</h3>
+        <Tooltip content="Our AI analyzes multiple risk factors to protect your assets">
+          <InfoIcon className="w-5 h-5 text-muted-foreground" />
+        </Tooltip>
+      </div>
 
       {/* Overall Risk Score */}
-      <Card className="p-4 bg-dark border-border/40">
-        <div className="space-y-3">
+      <Card className="p-6 bg-dark border-border/40">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="font-medium">Overall Risk Assessment</h4>
-            <div className={`px-3 py-1 rounded-full ${getRiskScoreBgColor(riskAssessment.score)}`}>
-              <span className={`font-bold ${getRiskScoreColor(riskAssessment.score)}`}>
-                {riskAssessment.score.toFixed(0)}/100
+            <div>
+              <h4 className="font-medium text-lg">Overall Risk Assessment</h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Based on {riskFactors.length} key risk factors
+              </p>
+            </div>
+            <div className={`px-4 py-2 rounded-full ${getRiskScoreBgColor(riskAssessment.overallRiskScore)}`}>
+              <span className={`text-lg font-bold ${getRiskScoreColor(riskAssessment.overallRiskScore)}`}>
+                {riskAssessment.overallRiskScore.toFixed(0)}/100
               </span>
             </div>
           </div>
           
-          <div className="flex items-center space-x-2">
-            <span className={riskScoringService.getRiskLevelIcon(riskAssessment.level)}>
+          <div className="flex items-center space-x-3">
+            <span className={`text-2xl ${riskScoringService.getRiskLevelIcon(riskAssessment.level)}`}>
               {riskScoringService.getRiskLevelIcon(riskAssessment.level)}
             </span>
-            <span className={`font-medium ${riskScoringService.getRiskLevelColor(riskAssessment.level)}`}>
-              {riskAssessment.level} Risk Level
-            </span>
+            <div>
+              <span className={`font-medium text-lg ${riskScoringService.getRiskLevelColor(riskAssessment.level)}`}>
+                {riskAssessment.level} Risk Level
+              </span>
+              <p className="text-sm text-muted-foreground">
+                {riskAssessment.level === 'HIGH' ? 'Exercise extreme caution' :
+                 riskAssessment.level === 'MEDIUM' ? 'Proceed with caution' :
+                 'Relatively safe to proceed'}
+              </p>
+            </div>
           </div>
 
           {/* Risk Score Bar */}
-          <div className="w-full bg-gray-700 rounded-full h-2">
-            <div
-              className={`h-2 rounded-full transition-all ${
-                riskAssessment.score >= 80 ? 'bg-red-500' :
-                riskAssessment.score >= 60 ? 'bg-orange-500' :
-                riskAssessment.score >= 30 ? 'bg-yellow-500' : 'bg-green-500'
-              }`}
-              style={{ width: `${riskAssessment.score}%` }}
-            />
-          </div>
-        </div>
-      </Card>
-
-      {/* Protocol Analysis */}
-      <Card className="p-4 bg-dark border-border/40">
-        <h4 className="font-medium mb-3">Protocol Security Analysis</h4>
-        <div className="space-y-2">
-          {route.protocols.map((protocol, index) => {
-            const protocolRisk = getProtocolRiskLevel(protocol)
-            return (
-              <div key={index} className="flex items-center justify-between p-2 bg-dark-accent rounded">
-                <div className="flex items-center space-x-2">
-                  <span>{protocolRisk.icon}</span>
-                  <span className="font-medium">{protocol}</span>
-                </div>
-                <div className={`px-2 py-1 rounded text-xs ${protocolRisk.bgColor}`}>
-                  <span className={protocolRisk.color}>{protocolRisk.level}</span>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </Card>
-
-      {/* Price Impact Analysis */}
-      <Card className="p-4 bg-dark border-border/40">
-        <h4 className="font-medium mb-3">Price Impact Analysis</h4>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Current Price Impact:</span>
-            <div className={`px-3 py-1 rounded ${priceImpactRisk.bgColor}`}>
-              <span className={`font-medium ${priceImpactRisk.color}`}>
-                {route.priceImpact.toFixed(2)}%
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Risk Score</span>
+              <span className={getRiskScoreColor(riskAssessment.overallRiskScore)}>
+                {riskAssessment.overallRiskScore.toFixed(0)}%
               </span>
             </div>
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-green-500">Safe: &lt;2%</span>
-              <span className="text-yellow-500">Moderate: 2-5%</span>
-              <span className="text-orange-500">High: 5-10%</span>
-              <span className="text-red-500">Critical: &gt;10%</span>
-            </div>
-            <div className="w-full bg-gray-700 rounded-full h-2">
+            <div className="w-full bg-gray-700 rounded-full h-3">
               <div
-                className={`h-2 rounded-full transition-all ${
-                  route.priceImpact > 10 ? 'bg-red-500' :
-                  route.priceImpact > 5 ? 'bg-orange-500' :
-                  route.priceImpact > 2 ? 'bg-yellow-500' : 'bg-green-500'
+                className={`h-3 rounded-full transition-all ${
+                  riskAssessment.overallRiskScore >= 80 ? 'bg-red-500' :
+                  riskAssessment.overallRiskScore >= 60 ? 'bg-orange-500' :
+                  riskAssessment.overallRiskScore >= 30 ? 'bg-yellow-500' : 'bg-green-500'
                 }`}
-                style={{ width: `${Math.min(route.priceImpact * 10, 100)}%` }}
+                style={{ width: `${riskAssessment.overallRiskScore}%` }}
               />
             </div>
           </div>
+
+          {/* AI Confidence */}
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="flex items-center justify-between text-sm mb-2">
+              <span className="text-muted-foreground">AI Analysis Confidence</span>
+              <span className="text-primary">{(riskAssessment.ai.confidence * 100).toFixed(0)}%</span>
+            </div>
+          </div>
         </div>
       </Card>
 
-      {/* Cross-Chain Analysis */}
-      {route.fromToken.chainId !== route.toToken.chainId && (
-        <Card className="p-4 bg-dark border-border/40">
-          <h4 className="font-medium mb-3">Cross-Chain Bridge Analysis</h4>
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <span className="text-yellow-500">⚠️</span>
-              <span className="font-medium">Cross-Chain Swap Detected</span>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <div className="text-muted-foreground">Source Chain</div>
-                <div className="font-medium">Chain ID: {route.fromToken.chainId}</div>
+      {/* Risk Factors Breakdown */}
+      <Card className="p-6 bg-dark border-border/40">
+        <h4 className="font-medium mb-4">Risk Factors</h4>
+        <div className="space-y-4">
+          {riskFactors.map((factor, index) => (
+            <div key={index} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-primary">{factor.icon}</span>
+                  <Tooltip content={factor.description}>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium">{factor.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        ({factor.weight}% weight)
+                      </span>
+                    </div>
+                  </Tooltip>
+                </div>
+                <span className={getRiskScoreColor(factor.score)}>
+                  {factor.score.toFixed(0)}%
+                </span>
               </div>
-              <div>
-                <div className="text-muted-foreground">Destination Chain</div>
-                <div className="font-medium">Chain ID: {route.toToken.chainId}</div>
+              <div className="w-full bg-gray-700 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${getRiskScoreBgColor(factor.score)}`}
+                  style={{ width: `${factor.score}%` }}
+                />
               </div>
-            </div>
-
-            <div className="p-2 bg-yellow-500/10 border border-yellow-500/20 rounded">
-              <div className="text-sm text-yellow-500">
-                Cross-chain swaps carry additional risks including bridge vulnerabilities, 
-                longer confirmation times, and potential for failed transactions.
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Risk Factors */}
-      <Card className="p-4 bg-dark border-border/40">
-        <h4 className="font-medium mb-3">Risk Factors</h4>
-        <div className="space-y-2">
-          {riskAssessment.factors.map((factor, index) => (
-            <div key={index} className="flex items-start space-x-2 p-2 bg-dark-accent rounded">
-              <span className="text-red-500 mt-0.5">•</span>
-              <span className="text-sm">{factor}</span>
             </div>
           ))}
         </div>
       </Card>
 
-      {/* Warnings */}
-      {riskAssessment.warnings.length > 0 && (
-        <Card className="p-4 bg-red-500/10 border border-red-500/20">
-          <h4 className="font-medium text-red-500 mb-3">⚠️ Critical Warnings</h4>
-          <div className="space-y-2">
-            {riskAssessment.warnings.map((warning, index) => (
-              <div key={index} className="flex items-start space-x-2">
-                <span className="text-red-500 mt-0.5">🚨</span>
-                <span className="text-sm text-red-400">{warning}</span>
+      {/* Recommendations */}
+      {getRecommendations().length > 0 && (
+        <Card className="p-6 bg-dark border-border/40">
+          <h4 className="font-medium mb-4">Recommendations</h4>
+          <div className="space-y-3">
+            {getRecommendations().map((rec, index) => (
+              <div key={index} className="flex items-start space-x-3 text-sm">
+                <div className="mt-0.5 text-primary">✦</div>
+                <p className="text-muted-foreground">{rec}</p>
               </div>
             ))}
           </div>
         </Card>
       )}
-
-      {/* Recommendations */}
-      <Card className="p-4 bg-green-500/10 border border-green-500/20">
-        <h4 className="font-medium text-green-500 mb-3">💡 Recommendations</h4>
-        <div className="space-y-2 text-sm text-green-400">
-          {riskAssessment.score >= 80 && (
-            <div>• Consider using a different token pair or reducing the swap amount</div>
-          )}
-          {riskAssessment.score >= 60 && (
-            <div>• Review all protocols involved and consider alternative routes</div>
-          )}
-          {route.priceImpact > 5 && (
-            <div>• High price impact detected - consider splitting the swap into smaller amounts</div>
-          )}
-          {route.protocols.some(p => !riskScoringService.isProtocolTrusted(p)) && (
-            <div>• Some protocols are not in our trusted list - proceed with caution</div>
-          )}
-          {route.fromToken.chainId !== route.toToken.chainId && (
-            <div>• Cross-chain swaps require additional verification - double-check all details</div>
-          )}
-          {riskAssessment.score < 30 && (
-            <div>• This route appears to be relatively safe based on our analysis</div>
-          )}
-        </div>
-      </Card>
     </div>
   )
-} 
+}
