@@ -1,4 +1,4 @@
-import { AptosClient, AptosAccount, CoinClient, Types } from 'aptos';
+import { AptosClient, AptosAccount, CoinClient, Types, MaybeHexString } from 'aptos';
 import { APIError } from '../utils/errorHandler';
 import pino from 'pino';
 
@@ -14,7 +14,7 @@ export interface AptosTransaction {
   max_gas_amount: string;
   gas_unit_price: string;
   expiration_timestamp_secs: string;
-  payload: Types.TransactionPayload;
+  payload: Types.EntryFunctionPayload;
 }
 
 export class AptosService {
@@ -51,10 +51,10 @@ export class AptosService {
     }
   }
 
-  async estimateGasFee(transaction: Types.TransactionPayload): Promise<string> {
+  async estimateGasFee(): Promise<string> {
     try {
-      const estimate = await this.client.estimateGasPrice(transaction);
-      return estimate.toString();
+      const estimate = await this.client.estimateGasPrice();
+      return estimate.gas_estimate.toString();
     } catch (error) {
       logger.error('Failed to estimate Aptos gas fee:', error);
       throw new APIError(500, 'Failed to estimate Aptos gas fee');
@@ -62,23 +62,23 @@ export class AptosService {
   }
 
   async submitTransaction(
-    senderAddress: string,
-    payload: Types.TransactionPayload
+    senderAccount: AptosAccount,
+    payload: Types.EntryFunctionPayload
   ): Promise<AptosTransaction> {
     try {
-      const txnRequest = await this.client.generateTransaction(senderAddress, payload);
-      const signedTxn = await this.client.signTransaction(senderAddress, txnRequest);
+      const txnRequest = await this.client.generateTransaction(senderAccount.address(), payload);
+      const signedTxn = await this.client.signTransaction(senderAccount, txnRequest);
       const response = await this.client.submitTransaction(signedTxn);
       
       await this.client.waitForTransaction(response.hash);
       
       return {
         hash: response.hash,
-        sender: senderAddress,
-        sequence_number: txnRequest.sequence_number,
-        max_gas_amount: txnRequest.max_gas_amount,
-        gas_unit_price: txnRequest.gas_unit_price,
-        expiration_timestamp_secs: txnRequest.expiration_timestamp_secs,
+        sender: senderAccount.address().toString(),
+        sequence_number: txnRequest.sequence_number.toString(),
+        max_gas_amount: txnRequest.max_gas_amount.toString(),
+        gas_unit_price: txnRequest.gas_unit_price.toString(),
+        expiration_timestamp_secs: txnRequest.expiration_timestamp_secs.toString(),
         payload
       };
     } catch (error) {

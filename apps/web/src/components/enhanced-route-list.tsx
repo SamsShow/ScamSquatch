@@ -1,34 +1,34 @@
-'use climport { riskScoringService } from '@/lib/services/risk-scoring';
-import type { CombinedRiskAssessment } from '@/lib/types/risk';ent'
+'use client';
 
-import { useState } from 'react'
-import { useAppDispatch, useAppSelector } from '@/store'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { selectRoute } from '@/store/slices/swap'
-import { riskScoringService, type RiskAssessment } from '@/lib/services/risk-scoring'
-import { RouteFlow } from '@/components/route-flow'
-import { SafeAlternative } from '@/components/safe-alternative'
-import { RouteComparison } from '@/components/route-comparison'
-import { DetailedRiskBreakdown } from '@/components/detailed-risk-breakdown'
-import type { RouteInfo } from '@/lib/api/1inch'
-import { AIAnalysisWidget } from './ai-analysis-widget'
+import { useState } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { selectRoute } from '@/store/slices/swap';
+import { riskScoringService } from '@/lib/services/risk-scoring';
+import type { RouteInfo } from '@/lib/api/1inch';
+import type { CombinedRiskAssessment } from '@/lib/types/risk';
+import { RouteFlow } from '@/components/route-flow';
+import { SafeAlternative } from '@/components/safe-alternative';
+import { AIAnalysisWidget } from './ai-analysis-widget';
 
 interface EnhancedRouteListProps {
-  routes: RouteInfo[]
-  riskAssessments: CombinedRiskAssessment[]
+  routes: RouteInfo[];
+  riskAssessments: CombinedRiskAssessment[];
 }
 
 export function EnhancedRouteList({ routes, riskAssessments }: EnhancedRouteListProps) {
-  const dispatch = useAppDispatch()
-  const { selectedRouteId } = useAppSelector((state) => state.swap)
+  const dispatch = useAppDispatch();
+  const { selectedRouteId } = useAppSelector((state) => state.swap);
   
-  const [showFlow, setShowFlow] = useState<string | null>(null)
-  const [showSafeAlternative, setShowSafeAlternative] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'list' | 'comparison'>('list')
+  const [showFlow, setShowFlow] = useState<string | null>(null);
+  const [showSafeAlternative, setShowSafeAlternative] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'comparison'>('list');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const handleRouteSelect = (routeId: string) => {
-    (dispatch as any)(selectRoute(routeId))
+    setSelectedId(routeId);
+    (dispatch as any)(selectRoute(routeId));
   }
 
   const handleSafeAlternativeSelect = (routeId: string) => {
