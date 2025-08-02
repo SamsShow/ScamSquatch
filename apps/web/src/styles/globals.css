@@ -120,6 +120,35 @@
     background-clip: text;
     color: transparent;
   }
+
+  .hover-lift {
+    transition: transform 0.2s cubic-bezier(0.215, 0.61, 0.355, 1);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  .hover-bright {
+    transition: filter 0.2s ease;
+  }
+
+  .hover-bright:hover {
+    filter: brightness(1.1);
+  }
+
+  .glow {
+    box-shadow: 0 0 20px hsl(var(--brand) / 0.15);
+  }
+
+  .glow:hover {
+    box-shadow: 0 0 30px hsl(var(--brand) / 0.25);
+  }
+
+  .backdrop-blur {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
 }
 
 @keyframes fadeIn {
@@ -173,6 +202,56 @@
     border-color: hsl(var(--brand));
     box-shadow: 0 0 0 2px hsl(var(--brand) / 0.2);
   }
+
+  /* Interactive loading states */
+  .loading-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* Tooltip styles */
+  .tooltip {
+    position: relative;
+    display: inline-block;
+  }
+
+  .tooltip:before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    padding: 4px 8px;
+    border-radius: var(--radius);
+    background: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+  }
+
+  .tooltip:hover:before {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-8px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* Scrollbar styling */
@@ -197,4 +276,54 @@
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: hsl(var(--muted-foreground));
+}
+
+/* Media queries and accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .glass-effect {
+    backdrop-filter: none;
+    background: hsl(var(--background));
+  }
+
+  .dark .glass-effect {
+    background: hsl(var(--background));
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .hover-enabled {
+    transition: all 0.2s ease;
+  }
+
+  .hover-enabled:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px -10px hsl(var(--card) / 0.2);
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: none !important;
+    color: rgb(0, 0, 0) !important;
+  }
+
+  .print-break-inside {
+    break-inside: avoid;
+  }
 }
