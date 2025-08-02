@@ -8,6 +8,11 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata = {
   title: 'ScamSquatch - Secure Cross-Chain Swaps',
   description: 'AI-powered protection against scam routes, fake bridges, and honeypots.',
+  icons: {
+    icon: [
+      { url: '/logo-shield.svg', type: 'image/svg+xml' },
+    ],
+  },
 };
 
 export default function RootLayout({

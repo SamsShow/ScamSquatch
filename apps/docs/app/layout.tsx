@@ -14,6 +14,11 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "ScamSquatch - API Documentation",
   description: "AI-powered fraud detection layer for secure cross-chain swaps",
+  icons: {
+    icon: [
+      { url: '/logo-shield.svg', type: 'image/svg+xml' },
+    ],
+  },
 };
 
 export default function RootLayout({

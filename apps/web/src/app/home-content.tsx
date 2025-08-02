@@ -46,9 +46,12 @@ export default function HomeContent() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-8">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-brand-light bg-clip-text text-transparent">
-              ScamSquatch
-            </h1>
+            <div className="flex items-center gap-2">
+              <img src="/logo-shield.svg" alt="ScamSquatch Logo" className="w-8 h-8" />
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-brand-light bg-clip-text text-transparent">
+                ScamSquatch
+              </h1>
+            </div>
             <nav className="hidden md:flex space-x-6">
               <a href="#features" className="text-foreground/80 hover:text-foreground transition-colors">
                 Features

@@ -6,9 +6,12 @@ export default function Home() {
     <div className={styles.page}>
       <main className={styles.main}>
         <div className={styles.logo}>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#3ECF8E' }}>
-            🚫💰 ScamSquatch
-          </h1>
+          <div className="flex items-center gap-3">
+            <img src="/logo-shield.svg" alt="ScamSquatch Logo" className="w-12 h-12" />
+            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#3ECF8E' }}>
+              ScamSquatch
+            </h1>
+          </div>
           <p style={{ fontSize: '1.2rem', color: '#666', marginTop: '0.5rem' }}>
             AI-Powered Cross-Chain Swap Protection
           </p>
