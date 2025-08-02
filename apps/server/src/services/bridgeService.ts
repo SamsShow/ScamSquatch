@@ -3,15 +3,6 @@ import { WormholeService, BridgeStatus } from './wormholeService';
 import { APIError } from '../utils/errorHandler';
 import pino from 'pino';
 
-// For testing
-export function createMockWormholeService() {
-  return {
-    estimateBridgeFee: vi.fn(),
-    initiateBridgeTransfer: vi.fn(),
-    getBridgeStatus: vi.fn()
-  };
-}
-
 const logger = pino({
   name: 'bridge-service',
   level: process.env.LOG_LEVEL || 'info'
@@ -63,13 +54,19 @@ export interface BridgeTransactionStatus extends BridgeStatus {
 
 export class BridgeService {
   private readonly aptosService: AptosService;
-  private readonly wormholeService: WormholeService;    constructor(
-      mockAptosService?: AptosService,
-      mockWormholeService?: WormholeService
-    ) {
-      this.aptosService = mockAptosService || new AptosService();
-      this.wormholeService = mockWormholeService || new WormholeService();
-    }
+  private readonly wormholeService: WormholeService;
+  
+  constructor(mockAptosService?: AptosService, mockWormholeService?: WormholeService) {
+    this.aptosService = mockAptosService || new AptosService();
+    this.wormholeService = mockWormholeService || new WormholeService();
+    logger.info('Initialized BridgeService');
+  }
+
+  private calculateAmount(fromAmount: string): string {
+    // For MVP, we use a 1:1 ratio between chains
+    // TODO: Implement actual exchange rate calculations
+    return fromAmount;
+  }
 
   async getBridgeQuote(params: {
     fromChain: number;
@@ -106,16 +103,17 @@ export class BridgeService {
         bridgeProvider: 'Wormhole'
       };
 
-      return { success: true, data: quote };
-    } catch (error: any) {
-      logger.error(error, '❌ Failed to get bridge quote');
-      return { success: false, error: error.message };
+      return {
+        success: true,
+        data: quote
+      };
+    } catch (error) {
+      logger.error(error, '❌ Error getting bridge quote');
+      return {
+        success: false,
+        error: error instanceof APIError ? error.message : 'Failed to get bridge quote'
+      };
     }
-  }
-
-  private calculateAmount(amount: string): string {
-    // Simplified 1:1 conversion for MVP
-    return amount;
   }
 
   async executeBridge(params: {

@@ -1,7 +1,7 @@
+import '@/styles/globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
 import { Inter } from 'next/font/google';
 import { Providers } from './providers';
-import '@/styles/globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen bg-background antialiased`}>
+      <body className={`${inter.className} min-h-screen bg-background text-foreground antialiased dark:bg-[#020817] dark:text-white`}>
         <Providers>{children}</Providers>
       </body>
     </html>

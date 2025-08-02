@@ -1,41 +1,36 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WormholeService } from '../src/services/wormholeService';
 
-const mockFeeData = {
-  gasPrice: { toString: () => '50000000000' },
-  maxFeePerGas: null,
-  maxPriorityFeePerGas: null
-};
+// Mock ethers module
+vi.mock('ethers', () => {
+  const mockBigNumber = function(value: string | number) {
+    const bigIntValue = BigInt(value.toString());
+    return {
+      toString: () => bigIntValue.toString(),
+      mul: (other: any) => mockBigNumber((bigIntValue * BigInt(other.toString())).toString()),
+      div: (other: any) => mockBigNumber((bigIntValue / BigInt(other.toString())).toString()),
+      add: (other: any) => mockBigNumber((bigIntValue + BigInt(other.toString())).toString()),
+      toHexString: () => '0x' + bigIntValue.toString(16)
+    };
+  };
+  mockBigNumber.from = (value: string | number) => mockBigNumber(value);
 
-const mockProvider = {
-  getFeeData: vi.fn().mockResolvedValue(mockFeeData)
-};
-
-let providerShouldThrow = false;
-
-vi.mock('ethers', async () => {
   return {
     ethers: {
+      BigNumber: mockBigNumber,
       providers: {
-        Provider: class {},
-        JsonRpcProvider: vi.fn().mockImplementation((url) => {
-          if (!url) throw new Error('Provider not initialized');
-          if (providerShouldThrow) {
-            throw new Error('Provider not initialized');
-          }
-          return mockProvider;
-        })
+        JsonRpcProvider: vi.fn().mockImplementation(() => ({
+          getFeeData: vi.fn().mockResolvedValue({
+            gasPrice: mockBigNumber('20000000000'), // 20 Gwei - base gas price
+            maxFeePerGas: null,
+            maxPriorityFeePerGas: null
+          }),
+          getNetwork: vi.fn().mockResolvedValue({ chainId: 11155111, name: 'sepolia' }),
+          getGasPrice: vi.fn().mockResolvedValue(mockBigNumber('20000000000')),
+          _isProvider: true
+        })),
+        Provider: vi.fn()
       }
-    },
-    providers: {
-      Provider: class {},
-      JsonRpcProvider: vi.fn().mockImplementation((url) => {
-        if (!url) throw new Error('Provider not initialized');
-        if (providerShouldThrow) {
-          throw new Error('Provider not initialized');
-        }
-        return mockProvider;
-      })
     }
   };
 });

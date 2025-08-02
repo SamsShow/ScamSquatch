@@ -26,9 +26,25 @@ function WalletProviders({ children }: { children: React.ReactNode }) {
   }, []);
   
   if (!mounted || !config) {
-    // Only render QueryClientProvider on SSR to avoid Wagmi/WalletConnect SSR issues
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+    return null;
   }
+
+  return (
+    <WagmiProvider config={config as Config}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem={true}
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
   
   return (
     <WagmiProvider config={config}>
@@ -43,7 +59,13 @@ function WalletProviders({ children }: { children: React.ReactNode }) {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+    <ThemeProvider 
+      attribute="class" 
+      defaultTheme="dark" 
+      enableSystem={true}
+      disableTransitionOnChange
+      forcedTheme="dark"
+    >
       <ReduxProvider store={store}>
         <WalletProviders>{children}</WalletProviders>
       </ReduxProvider>

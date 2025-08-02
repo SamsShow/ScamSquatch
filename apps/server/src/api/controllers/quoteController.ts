@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { oneInchService } from '../../services/oneInchService';
 import { riskService } from '../../services/riskService';
 import { onChainDataService } from '../../services/onChainDataService';
-import { bridgeService } from '../../services/bridgeService';
+import { bridgeService } from '../../services/index';
 
 export interface QuoteRequest {
   fromChain: number;

@@ -1,0 +1,23 @@
+/* Base dark mode styles */
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-background text-foreground;
+}
+
+/* Ensure text is visible in dark mode */
+.dark body {
+  @apply bg-[#020817] text-white;
+}
+
+/* Add a subtle gradient to the background */
+.dark::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(2,8,23,0) 0%, rgba(2,8,23,0.2) 100%);
+  pointer-events: none;
+  z-index: -1;
+}
