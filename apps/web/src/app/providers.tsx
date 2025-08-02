@@ -1,49 +1,51 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { WagmiProvider, createConfig, http } from 'wagmi';
-import { sepolia, polygon } from 'wagmi/chains';
-import { RainbowKitProvider, getDefaultWallets } from '@rainbow-me/rainbowkit';
+import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
 import { ThemeProvider } from 'next-themes';
+import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { store } from '@/store';
-import type { Config } from 'wagmi';
+import { chains, getConfig } from '@/config/wagmi';
 
+// Create a client
 const queryClient = new QueryClient();
-
-// Configure RainbowKit wallet connection
-const { wallets } = getDefaultWallets({
-  appName: 'ScamSquatch',
-  projectId: 'YOUR_WALLETCONNECT_PROJECT_ID', // Add your WalletConnect project ID here
-  chains: [sepolia, polygon],
-});
 
 function WalletProviders({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
-  const [wagmiConfig, setWagmiConfig] = useState<Config | null>(null);
-  
+  const [wagmiConfig, setWagmiConfig] = useState<any>(null);
+
   useEffect(() => {
-    setMounted(true);
-    const config = createConfig({
-      chains: [sepolia, polygon],
-      transports: {
-        [sepolia.id]: http(),
-        [polygon.id]: http(),
-      },
-      ssr: true,
-    });
-    setWagmiConfig(config);
+    const initConfig = async () => {
+      try {
+        const config = await getConfig();
+        if (config) {
+          setWagmiConfig(config);
+        }
+      } catch (error) {
+        console.error('Failed to initialize Wagmi config:', error);
+      }
+      setMounted(true);
+    };
+
+    initConfig();
   }, []);
 
-  if (!mounted || !wagmiConfig) {
+  // Prevent hydration issues
+  if (!mounted) {
     return null;
+  }
+
+  // Don't render wallet components until config is ready
+  if (!wagmiConfig) {
+    return <>{children}</>;
   }
 
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider chains={[sepolia, polygon]}>
+        <RainbowKitProvider modalSize="compact">
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>

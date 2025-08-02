@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useConfig } from 'wagmi';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 // Dynamically import components to prevent SSR issues
@@ -69,6 +69,7 @@ export default function DashboardContent() {
   const config = useConfig();
   const { isConnected, isConnecting, isReconnecting } = useAccount();
   const router = useRouter();
+  const pathname = usePathname();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Show loading state if WagmiProvider is not available
@@ -102,9 +103,40 @@ export default function DashboardContent() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-brand to-brand-light bg-clip-text text-transparent">
-            ScamSquatch
-          </h1>
+          <div className="flex items-center gap-8">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-brand to-brand-light bg-clip-text text-transparent">
+              ScamSquatch
+            </h1>
+            <nav className="hidden md:flex items-center space-x-6">
+              <Button
+                variant="ghost"
+                onClick={() => router.push('/dashboard')}
+                className={`text-foreground/80 hover:text-foreground transition-colors ${
+                  pathname === '/dashboard' ? 'bg-accent' : ''
+                }`}
+              >
+                Dashboard
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => router.push('/ml-ops')}
+                className={`text-foreground/80 hover:text-foreground transition-colors ${
+                  pathname === '/ml-ops' ? 'bg-accent' : ''
+                }`}
+              >
+                ML Ops
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => router.push('/analytics')}
+                className={`text-foreground/80 hover:text-foreground transition-colors ${
+                  pathname === '/analytics' ? 'bg-accent' : ''
+                }`}
+              >
+                Analytics
+              </Button>
+            </nav>
+          </div>
           <div className="flex items-center gap-4">
             <div className={isLoading ? 'opacity-50 pointer-events-none' : ''}>
               <ConnectButton showBalance={true} chainStatus="icon" accountStatus="address" />
@@ -159,4 +191,4 @@ export default function DashboardContent() {
       </main>
     </div>
   );
-} 
+}
