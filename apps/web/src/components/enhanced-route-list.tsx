@@ -1,4 +1,5 @@
-'use client'
+'use climport { riskScoringService } from '@/lib/services/risk-scoring';
+import type { CombinedRiskAssessment } from '@/lib/types/risk';ent'
 
 import { useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@/store'
@@ -11,10 +12,11 @@ import { SafeAlternative } from '@/components/safe-alternative'
 import { RouteComparison } from '@/components/route-comparison'
 import { DetailedRiskBreakdown } from '@/components/detailed-risk-breakdown'
 import type { RouteInfo } from '@/lib/api/1inch'
+import { AIAnalysisWidget } from './ai-analysis-widget'
 
 interface EnhancedRouteListProps {
   routes: RouteInfo[]
-  riskAssessments: RiskAssessment[]
+  riskAssessments: CombinedRiskAssessment[]
 }
 
 export function EnhancedRouteList({ routes, riskAssessments }: EnhancedRouteListProps) {
@@ -63,8 +65,9 @@ export function EnhancedRouteList({ routes, riskAssessments }: EnhancedRouteList
 
   return (
     <div className="space-y-6">
+      {/* View Mode Toggle */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">Available Routes</h3>
+        <h2 className="text-lg font-semibold">Available Routes</h2>
         <div className="flex items-center space-x-2">
           <Button
             variant={viewMode === 'list' ? 'default' : 'outline'}
@@ -93,161 +96,167 @@ export function EnhancedRouteList({ routes, riskAssessments }: EnhancedRouteList
       ) : (
         <>
           {routes.map((route, index) => {
-        const risk = riskAssessments[index]
-        const isSelected = selectedRouteId === route.id
-        
-        if (!risk) {
-          return null
-        }
-        
-        const isHighRisk = risk.level === 'HIGH' || risk.level === 'CRITICAL'
-        
-        return (
-          <div key={route.id} className="space-y-4">
-            <Card
-              className={`p-4 border transition-all cursor-pointer ${
-                isSelected
-                  ? 'bg-brand/10 border-brand'
-                  : 'bg-dark border-border/40 hover:bg-dark-accent/50 hover:border-border/60'
-              }`}
-              onClick={() => handleRouteSelect(route.id)}
-            >
-              <div className="space-y-3">
-                {/* Header with Risk Level */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className={riskScoringService.getRiskLevelIcon(risk.level)}>
-                      {riskScoringService.getRiskLevelIcon(risk.level)}
-                    </span>
-                    <span className={`font-medium ${riskScoringService.getRiskLevelColor(risk.level)}`}>
-                      {risk.level} Risk
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      ({risk.score.toFixed(0)}/100)
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    {isHighRisk && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setShowSafeAlternative(route.id)
-                        }}
-                        className="text-green-500 border-green-500 hover:bg-green-500/10"
-                      >
-                        Find Safer Route
-                      </Button>
-                    )}
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setShowFlow(showFlow === route.id ? null : route.id)
-                      }}
-                    >
-                      {showFlow === route.id ? 'Hide Flow' : 'Show Flow'}
-                    </Button>
-                    
-                    {isSelected && (
-                      <div className="text-brand font-medium">✓ Selected</div>
-                    )}
-                  </div>
-                </div>
+            const risk = riskAssessments[index]
+            const aiAnalysis = risk.ai // Assuming AI analysis is included in risk assessment
+            const isSelected = selectedRouteId === route.id
+            
+            if (!risk) {
+              return null
+            }
+            
+            const isHighRisk = risk.level === 'HIGH' || risk.level === 'CRITICAL'
+            
+            return (
+              <div key={route.id} className="space-y-4">
+                <Card
+                  className={`p-4 border transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-brand/10 border-brand'
+                      : 'bg-dark border-border/40 hover:bg-dark-accent/50 hover:border-border/60'
+                  }`}
+                  onClick={() => handleRouteSelect(route.id)}
+                >
+                  <div className="space-y-3">
+                    {/* Header with Risk Level */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className={riskScoringService.getRiskLevelIcon(risk.level)}>
+                          {riskScoringService.getRiskLevelIcon(risk.level)}
+                        </span>
+                        <span className={`font-medium ${riskScoringService.getRiskLevelColor(risk.level)}`}>
+                          {risk.level} Risk
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          ({risk.score.toFixed(0)}/100)
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        {isHighRisk && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setShowSafeAlternative(route.id)
+                            }}
+                            className="text-green-500 border-green-500 hover:bg-green-500/10"
+                          >
+                            Find Safer Route
+                          </Button>
+                        )}
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setShowFlow(showFlow === route.id ? null : route.id)
+                          }}
+                        >
+                          {showFlow === route.id ? 'Hide Flow' : 'Show Flow'}
+                        </Button>
+                        
+                        {isSelected && (
+                          <div className="text-brand font-medium">✓ Selected</div>
+                        )}
+                      </div>
+                    </div>
 
-                {/* Route Info */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <div className="text-muted-foreground">You Pay</div>
-                    <div className="font-medium">
-                      {formatAmount(route.fromAmount, route.fromToken.decimals)} {route.fromToken.symbol}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">You Receive</div>
-                    <div className="font-medium">
-                      {formatAmount(route.toAmount, route.toToken.decimals)} {route.toToken.symbol}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Price Impact</div>
-                    <div className={`font-medium ${getPriceImpactColor(route.priceImpact)}`}>
-                      {route.priceImpact.toFixed(2)}%
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Gas Cost</div>
-                    <div className="font-medium">
-                      {formatGas(route.estimatedGas)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Protocols */}
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Protocols</div>
-                  <div className="flex flex-wrap gap-1">
-                    {route.protocols.map((protocol, idx) => (
-                      <span
-                        key={idx}
-                        className={`px-2 py-1 rounded text-xs ${
-                          riskScoringService.isProtocolTrusted(protocol)
-                            ? 'bg-green-500/20 text-green-500'
-                            : 'bg-red-500/20 text-red-500'
-                        }`}
-                      >
-                        {protocol}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Risk Warnings */}
-                {risk.warnings.length > 0 && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md">
-                    <div className="text-sm font-medium text-red-500 mb-1">Warnings:</div>
-                    <div className="space-y-1">
-                      {risk.warnings.map((warning, idx) => (
-                        <div key={idx} className="text-sm text-red-400 flex items-center gap-2">
-                          <span>⚠️</span>
-                          <span>{warning}</span>
+                    {/* Route Info */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground">You Pay</div>
+                        <div className="font-medium">
+                          {formatAmount(route.fromAmount, route.fromToken.decimals)} {route.fromToken.symbol}
                         </div>
-                      ))}
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">You Receive</div>
+                        <div className="font-medium">
+                          {formatAmount(route.toAmount, route.toToken.decimals)} {route.toToken.symbol}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Price Impact</div>
+                        <div className={`font-medium ${getPriceImpactColor(route.priceImpact)}`}>
+                          {route.priceImpact.toFixed(2)}%
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Gas Cost</div>
+                        <div className="font-medium">
+                          {formatGas(route.estimatedGas)}
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Protocols */}
+                    <div>
+                      <div className="text-sm text-muted-foreground mb-1">Protocols</div>
+                      <div className="flex flex-wrap gap-1">
+                        {route.protocols.map((protocol, idx) => (
+                          <span
+                            key={idx}
+                            className={`px-2 py-1 rounded text-xs ${
+                              riskScoringService.isProtocolTrusted(protocol)
+                                ? 'bg-green-500/20 text-green-500'
+                                : 'bg-red-500/20 text-red-500'
+                            }`}
+                          >
+                            {protocol}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Risk Warnings */}
+                    {risk.warnings.length > 0 && (
+                      <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md">
+                        <div className="text-sm font-medium text-red-500 mb-1">Warnings:</div>
+                        <div className="space-y-1">
+                          {risk.warnings.map((warning, idx) => (
+                            <div key={idx} className="text-sm text-red-400 flex items-center gap-2">
+                              <span>⚠️</span>
+                              <span>{warning}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
+                </Card>
+
+                {/* AI Analysis */}
+                {isSelected && aiAnalysis && (
+                  <AIAnalysisWidget analysis={aiAnalysis} />
+                )}
+
+                {/* Route Flow and Safe Alternative */}
+                {showFlow === route.id && (
+                  <RouteFlow
+                    route={route}
+                    riskAssessment={risk}
+                    onSafeAlternative={() => setShowSafeAlternative(route.id)}
+                  />
+                )}
+
+                {/* Safe Alternative Modal */}
+                {showSafeAlternative === route.id && (
+                  <SafeAlternative
+                    currentRoute={route}
+                    currentRisk={risk}
+                    allRoutes={routes}
+                    allRiskAssessments={riskAssessments}
+                    onSelectAlternative={handleSafeAlternativeSelect}
+                    onClose={() => setShowSafeAlternative(null)}
+                  />
                 )}
               </div>
-            </Card>
-
-            {/* Flow Visualization */}
-            {showFlow === route.id && (
-              <RouteFlow
-                route={route}
-                riskAssessment={risk}
-                onSafeAlternative={() => setShowSafeAlternative(route.id)}
-              />
-            )}
-
-            {/* Safe Alternative Modal */}
-            {showSafeAlternative === route.id && (
-              <SafeAlternative
-                currentRoute={route}
-                currentRisk={risk}
-                allRoutes={routes}
-                allRiskAssessments={riskAssessments}
-                onSelectAlternative={handleSafeAlternativeSelect}
-                onClose={() => setShowSafeAlternative(null)}
-              />
-            )}
-          </div>
-        )
-      })}
+            )
+          })}
         </>
       )}
     </div>
   )
-} 
+}
