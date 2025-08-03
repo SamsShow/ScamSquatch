@@ -1,13 +1,16 @@
+// Configuration
 const API_BASE_URL = 'https://api.1inch.dev/fusion';
 const API_KEY = process.env.ONE_INCH_API_KEY;
+const MAX_PRICE_IMPACT = 0.05; // 5% max price impact
+const MAX_SLIPPAGE = 0.01; // 1% max slippage
 
+// Interfaces
 export interface TokenInfo {
   symbol: string;
   address: string;
   decimals: number;
   chainId: number;
   name: string;
-  logoURI?: string;
 }
 
 export interface RouteInfo {
@@ -20,12 +23,57 @@ export interface RouteInfo {
   estimatedGas: string;
   gasCost: string;
   priceImpact: number;
-  route: any;
+  riskScore: number;
+  riskFactors: RiskFactor[];
+  fromChainId: number;
+  toChainId: number;
+  bridge?: string;
 }
 
 export interface SwapQuote {
   routes: RouteInfo[];
-  error?: string;
+}
+
+interface RiskFactor {
+  type: 'PRICE_IMPACT' | 'CONTRACT_VERIFICATION' | 'LIQUIDITY' | 'BRIDGE_SECURITY';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH';
+  description: string;
+}
+
+interface BridgeCheckResponse {
+  secure: boolean;
+  reasons?: string[];
+}
+
+interface LiquidityResponse {
+  value: number;
+  token0: string;
+  token1: string;
+}
+
+interface AllowanceResponse {
+  value: string;
+  token: string;
+  owner: string;
+}
+
+interface SwapRoute {
+  id: string;
+  protocols: string[];
+  fromToken: TokenInfo;
+  toToken: TokenInfo;
+  fromAmount: string;
+  toAmount: string;
+  estimatedGas: string;
+  gasCost: string;
+  priceImpact: number;
+  fromChainId: number;
+  toChainId: number;
+  bridge?: string;
+}
+
+interface SwapQuoteResponse {
+  routes: SwapRoute[];
 }
 
 class OneInchService {
@@ -73,8 +121,7 @@ class OneInchService {
       }
       
       const response = await this.request(`/tokens?chainId=${chainId}`);
-      console.log('1inch API: Received response:', response);
-      return { success: true, data: (response as any).tokens || [] };
+      return { success: true, data: (response as { tokens: TokenInfo[] }).tokens || [] };
     } catch (error) {
       console.error('1inch API: Failed to fetch tokens:', error);
       console.log('1inch API: Using fallback tokens for chainId:', chainId);
@@ -135,7 +182,75 @@ class OneInchService {
     return tokens[chainId] || [];
   }
 
-  // Get swap routes
+  // Validate route security
+  private async validateRoute(route: SwapRoute, userAddress: string): Promise<{ riskScore: number; riskFactors: RiskFactor[] }> {
+    const riskFactors: RiskFactor[] = [];
+    let riskScore = 0;
+
+    // Check price impact
+    const priceImpact = parseFloat(route.priceImpact.toString());
+    if (priceImpact > MAX_PRICE_IMPACT) {
+      riskFactors.push({
+        type: 'PRICE_IMPACT',
+        severity: 'HIGH',
+        description: `High price impact of ${(priceImpact * 100).toFixed(2)}%`
+      });
+      riskScore += 0.4;
+    }
+
+    // Check bridge security for cross-chain swaps
+    if (route.fromChainId !== route.toChainId) {
+      try {
+        const bridgeCheck = await this.request(`/security/bridge-check`, {
+          method: 'POST',
+          body: JSON.stringify({
+            fromChainId: route.fromChainId,
+            toChainId: route.toChainId,
+            bridge: route.bridge
+          })
+        }) as BridgeCheckResponse;
+
+        if (!bridgeCheck.secure) {
+          riskFactors.push({
+            type: 'BRIDGE_SECURITY',
+            severity: 'HIGH',
+            description: 'Bridge security check failed'
+          });
+          riskScore += 0.4;
+        }
+      } catch (error) {
+        console.error('Failed to check bridge security:', error);
+        riskFactors.push({
+          type: 'BRIDGE_SECURITY',
+          severity: 'MEDIUM',
+          description: 'Unable to verify bridge security'
+        });
+        riskScore += 0.2;
+      }
+    }
+
+    // Check liquidity
+    try {
+      const liquidity = await this.request(
+        `/liquidity?pair=${route.fromToken.address}_${route.toToken.address}&chainId=${route.fromChainId}`
+      ) as LiquidityResponse;
+
+      if (liquidity.value < 100000) { // Less than $100k liquidity
+        riskFactors.push({
+          type: 'LIQUIDITY',
+          severity: 'MEDIUM',
+          description: 'Low liquidity pool'
+        });
+        riskScore += 0.2;
+      }
+    } catch (error) {
+      console.error('Failed to check liquidity:', error);
+    }
+
+    return { riskScore, riskFactors };
+  }
+
+  // Get swap routes with security validation
   async getRoutes(params: {
     fromToken: string;
     toToken: string;
@@ -148,53 +263,87 @@ class OneInchService {
       const response = await this.request('/quote', {
         method: 'POST',
         body: JSON.stringify({
-          fromToken: params.fromToken,
-          toToken: params.toToken,
-          fromAmount: params.fromAmount,
-          fromChainId: params.fromChainId,
-          toChainId: params.toChainId,
-          userAddress: params.userAddress,
+          ...params,
           enableEstimate: true,
           enableGasEstimate: true,
+          slippage: MAX_SLIPPAGE
         }),
-      });
+      }) as SwapQuoteResponse;
 
-      // Transform 1inch response to our format
-      const routes: RouteInfo[] = (response as any).routes?.map((route: any, index: number) => ({
-        id: `route-${index}`,
-        protocols: route.protocols || [],
-        fromToken: route.fromToken,
-        toToken: route.toToken,
-        fromAmount: route.fromAmount,
-        toAmount: route.toAmount,
-        estimatedGas: route.estimatedGas || '0',
-        gasCost: route.gasCost || '0',
-        priceImpact: route.priceImpact || 0,
-        route,
-      })) || [];
+      // Transform and validate routes
+      const routes: RouteInfo[] = await Promise.all(
+        (response.routes || []).map(async (route: SwapRoute) => {
+          const { riskScore, riskFactors } = await this.validateRoute(route, params.userAddress);
+          
+          return {
+            id: route.id,
+            protocols: route.protocols || [],
+            fromToken: route.fromToken,
+            toToken: route.toToken,
+            fromAmount: route.fromAmount,
+            toAmount: route.toAmount,
+            estimatedGas: route.estimatedGas || '0',
+            gasCost: route.gasCost || '0',
+            priceImpact: route.priceImpact || 0,
+            fromChainId: route.fromChainId,
+            toChainId: route.toChainId,
+            bridge: route.bridge,
+            riskScore,
+            riskFactors
+          };
+        })
+      );
 
       return { success: true, data: { routes } };
     } catch (error) {
-      console.error('Failed to fetch routes:', error);
+      console.error('Failed to get routes:', error);
       return { success: false, error: (error as Error).message };
     }
   }
 
-  // Execute swap
+  // Execute swap with pre-execution checks
   async executeSwap(params: {
     routeId: string;
     userAddress: string;
     signature: string;
   }): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      const response = await this.request('/swap', {
+      // Pre-execution checks
+      const route = await this.request(`/route/${params.routeId}`) as SwapRoute;
+      const { riskScore, riskFactors } = await this.validateRoute(route, params.userAddress);
+
+      // Block high-risk transactions
+      if (riskScore >= 0.8) {
+        return { 
+          success: false, 
+          error: 'Transaction blocked due to high risk. Risk factors: ' + 
+            riskFactors.map(f => f.description).join(', ')
+        };
+      }
+
+      // Check allowance
+      const allowance = await this.request(`/allowance`, {
         method: 'POST',
         body: JSON.stringify({
-          routeId: params.routeId,
-          userAddress: params.userAddress,
-          signature: params.signature,
-        }),
+          token: route.fromToken.address,
+          owner: params.userAddress,
+          chainId: route.fromChainId
+        })
+      }) as AllowanceResponse;
+
+      if (BigInt(allowance.value) < BigInt(route.fromAmount)) {
+        return { 
+          success: false, 
+          error: 'Insufficient token allowance' 
+        };
+      }
+
+      // Execute swap
+      const response = await this.request('/swap', {
+        method: 'POST',
+        body: JSON.stringify(params),
       });
+
       return { success: true, data: response };
     } catch (error) {
       console.error('Failed to execute swap:', error);
@@ -203,4 +352,4 @@ class OneInchService {
   }
 }
 
-export const oneInchService = new OneInchService(); 
+export const oneInchService = new OneInchService();
