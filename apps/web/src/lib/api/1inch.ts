@@ -4,7 +4,12 @@ export interface TokenInfo {
   decimals: number;
   chainId: number;
   name: string;
-  logoURI?: string;
+}
+
+export interface RiskFactor {
+  type: 'PRICE_IMPACT' | 'CONTRACT_VERIFICATION' | 'LIQUIDITY' | 'BRIDGE_SECURITY';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH';
+  description: string;
 }
 
 export interface RouteInfo {
@@ -17,12 +22,15 @@ export interface RouteInfo {
   estimatedGas: string;
   gasCost: string;
   priceImpact: number;
-  route: any;
+  riskScore: number;
+  riskFactors: RiskFactor[];
+  fromChainId: number;
+  toChainId: number;
+  bridge?: string;
 }
 
 export interface SwapQuote {
   routes: RouteInfo[];
-  error?: string;
 }
 
 class OneInchAPI {
@@ -119,7 +127,7 @@ class OneInchAPI {
     return tokens[chainId] || [];
   }
 
-  // Get swap routes
+  // Get swap routes with risk assessment
   async getRoutes(params: {
     fromToken: string;
     toToken: string;
@@ -133,24 +141,58 @@ class OneInchAPI {
         method: 'POST',
         body: JSON.stringify(params),
       });
+
       return response.data;
     } catch (error) {
       console.error('Failed to fetch routes:', error);
+      return { routes: [] };
+    }
+  }
+
+  // Check if user needs to approve token
+  async checkAllowance(params: {
+    token: string;
+    owner: string;
+    chainId: number;
+  }): Promise<boolean> {
+    try {
+      const response = await this.request('/allowance', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      });
+
+      return response.data.needsApproval === false;
+    } catch (error) {
+      console.error('Failed to check allowance:', error);
       throw error;
     }
   }
 
-  // Execute swap
+  // Execute swap with pre-execution validation
   async executeSwap(params: {
     routeId: string;
     userAddress: string;
     signature: string;
   }): Promise<any> {
     try {
+      // First check allowance
+      const route = await this.request(`/route/${params.routeId}`);
+      const hasAllowance = await this.checkAllowance({
+        token: route.fromToken.address,
+        owner: params.userAddress,
+        chainId: route.fromChainId
+      });
+
+      if (!hasAllowance) {
+        throw new Error('Token allowance required before swap');
+      }
+
+      // Execute swap if allowance is sufficient
       const response = await this.request('/swap', {
         method: 'POST',
         body: JSON.stringify(params),
       });
+
       return response.data;
     } catch (error) {
       console.error('Failed to execute swap:', error);
@@ -159,4 +201,4 @@ class OneInchAPI {
   }
 }
 
-export const oneInchAPI = new OneInchAPI(); 
+export const oneInchAPI = new OneInchAPI();
